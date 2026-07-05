@@ -22,11 +22,10 @@ from linkedinto.writer import write_json, write_yaml
 
 _logger = logging.getLogger(__name__)
 
-# Registered output format converters — in dependency order.
-# RenderCvConverter depends on JsonResumeConverter's output.
-# The ``requires`` attribute declared on each converter is validated
-# at runtime: if a required output hasn't been produced yet a
-# ValueError is raised with a clear message.
+# Registered output format converters — both are independent peers
+# consuming raw LinkedInData (``requires = None``).
+# The ``requires`` attribute on each converter is validated at runtime:
+# if a required output hasn't been produced yet a ValueError is raised.
 _CONVERTERS: list[Converter] = [
     JsonResumeConverter(),
     RenderCvConverter(),

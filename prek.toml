@@ -6,21 +6,21 @@ id = "ruff check"
 name = "ruff check"
 types = ["python"]
 language = "system"
-entry = "ruff check --fix src/ tests/"
+entry = "uvx ruff check --fix src/ tests/"
 
 [[repos.hooks]]
 id = "ruff format"
 name = "ruff format"
 types = ["python"]
 language = "system"
-entry = "ruff format --check --exclude tests/fixtures/"
+entry = "uvx ruff format --check --exclude tests/fixtures/"
 
 [[repos.hooks]]
 id = "ty check"
 name = "ty check"
 types = ["python"]
 language = "system"
-entry = "ty check src/ tests/"
+entry = "uvx ty check src/ tests/"
 
 [[repos]]
 repo = "https://github.com/pre-commit/pre-commit-hooks"
