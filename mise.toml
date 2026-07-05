@@ -1,6 +1,6 @@
 [tools]
 prek = "latest"
-python = "3.14"
+python = "3.12"
 uv = "latest"
 
 [settings]
@@ -11,17 +11,17 @@ run = "rm -rf dist/ .pytest_cache/ .ruff_cache/ .ty/ __pycache__/ **/__pycache__
 description = "Remove all generated and cache files"
 
 [tasks.test]
-run = "uv run pytest"
+run = "uvx pytest"
 description = "Run tests with coverage"
 
 [tasks.lint]
-run = "uv run ruff check src/ tests/"
+run = "uvx ruff check src/ tests/"
 description = "Run ruff linter"
 
-[tasks.format-check]
-run = "ruff format --check --respect-gitignore --exclude tests/fixtures/"
+[tasks.format]
+run = "uvx ruff format --respect-gitignore --exclude tests/fixtures/"
 description = "Check formatting with ruff"
 
 [tasks.typecheck]
-run = "uv run python -m ty check src/ tests/"
+run = "uvx ty check src/ tests/"
 description = "Run type checker"

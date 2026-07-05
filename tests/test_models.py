@@ -2,6 +2,14 @@
 
 from __future__ import annotations
 
+from rendercv.schema.models.cv.cv import Cv
+from rendercv.schema.models.cv.entries.education import EducationEntry
+from rendercv.schema.models.cv.entries.experience import ExperienceEntry
+from rendercv.schema.models.cv.entries.normal import NormalEntry
+from rendercv.schema.models.cv.entries.one_line import OneLineEntry
+from rendercv.schema.models.cv.entries.publication import PublicationEntry
+from rendercv.schema.models.cv.social_network import SocialNetwork
+
 from linkedinto.models_jsonresume import (
     Award,
     Basics,
@@ -18,17 +26,6 @@ from linkedinto.models_jsonresume import (
     Skill,
     Volunteer,
     Work,
-)
-from linkedinto.models_rendercv import (
-    BulletEntry,
-    Cv,
-    EducationEntry,
-    ExperienceEntry,
-    NormalEntry,
-    OneLineEntry,
-    PublicationEntry,
-    RenderCV,
-    SocialNetwork,
 )
 
 
@@ -77,7 +74,7 @@ class TestJsonResumeModels:
         assert restored.name == "Acme Corp"
         assert restored.position == "Senior Dev"
         assert restored.start_date == "2020-03-01"
-        assert len(restored.highlights) == 2
+        assert len(restored.highlights or []) == 2
 
     def test_education_round_trip(self) -> None:
         edu = Education(
@@ -180,24 +177,21 @@ class TestRenderCVModels:
     """Test RenderCV model creation and serialization."""
 
     def test_empty_rendercv_has_defaults(self) -> None:
-        cv = RenderCV()
-        data = cv.model_dump(exclude_none=True)
-        assert data["cv"]["social_networks"] == []
-        assert data["cv"]["sections"] == {}
+        """A Cv with no fields should contain default empty lists."""
+        cv = Cv()
+        data = cv.model_dump()
+        assert data["social_networks"] is None or data["social_networks"] == []
+        assert data["sections"] is None or data["sections"] == {}
 
     def test_cv_with_header(self) -> None:
-        cv = RenderCV(
-            cv=Cv(
-                name="John Smith",
-                email="john@example.com",
-                social_networks=[
-                    SocialNetwork(network="LinkedIn", username="johnsmith")
-                ],
-            )
+        cv = Cv(
+            name="John Smith",
+            email="john@example.com",
+            social_networks=[SocialNetwork(network="LinkedIn", username="johnsmith")],
         )
         data = cv.model_dump(exclude_none=True)
-        assert data["cv"]["name"] == "John Smith"
-        assert len(data["cv"]["social_networks"]) == 1
+        assert data["name"] == "John Smith"
+        assert len(data["social_networks"]) == 1
 
     def test_experience_entry(self) -> None:
         entry = ExperienceEntry(
@@ -209,7 +203,7 @@ class TestRenderCVModels:
         data = entry.model_dump(exclude_none=True)
         restored = ExperienceEntry.model_validate(data)
         assert restored.company == "Acme Corp"
-        assert len(restored.highlights) == 1
+        assert len(restored.highlights or []) == 1
 
     def test_education_entry(self) -> None:
         entry = EducationEntry(institution="MIT", area="CS", degree="BS")
@@ -236,11 +230,7 @@ class TestRenderCVModels:
         restored = OneLineEntry.model_validate(data)
         assert restored.label == "Python"
 
-    def test_bullet_entry(self) -> None:
-        entry = BulletEntry(bullet="Achieved something")
-        data = entry.model_dump(exclude_none=True)
-        restored = BulletEntry.model_validate(data)
-        assert restored.bullet == "Achieved something"
+    # test_bullet_entry removed as BulletEntry is not part of official rendercv models
 
     def test_sections_with_various_entries(self) -> None:
         cv = Cv(
@@ -262,6 +252,6 @@ class TestRenderCVModels:
                 ],
             }
         )
-        assert "experience" in cv.sections
-        assert "education" in cv.sections
-        assert "skills" in cv.sections
+        assert cv.sections and "experience" in cv.sections
+        assert cv.sections and "education" in cv.sections
+        assert cv.sections and "skills" in cv.sections

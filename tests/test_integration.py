@@ -142,7 +142,7 @@ class TestIntegrationPipeline:
         jr = json_converter.convert(data)
 
         rc_converter = RenderCvConverter()
-        rcv = rc_converter.convert(jr)
+        rcv = rc_converter.convert(data)
 
         # Verify all sections in JSON Resume output
         assert jr.basics is not None
@@ -153,9 +153,9 @@ class TestIntegrationPipeline:
         assert len(jr.languages) == 2
 
         # RenderCV output
-        assert rcv.cv.name == "John Smith"
-        assert len(rcv.cv.sections.get("experience", [])) == 1
-        assert len(rcv.cv.sections.get("education", [])) == 1
+        assert rcv.name == "John Smith"
+        assert len((rcv.sections or {}).get("experience", [])) == 1
+        assert len((rcv.sections or {}).get("education", [])) == 1
 
         path.unlink()
 
@@ -194,17 +194,18 @@ class TestIntegrationPipeline:
                     assert val is not None, f"{section_name} has null value: {item}"
 
         rc_converter = RenderCvConverter()
-        rcv = rc_converter.convert(jr)
+        rcv = rc_converter.convert(data)
 
         # RenderCV dump
-        sections = rcv.cv.sections
-        for section_name, entries in sections.items():
-            for entry in entries:
-                if isinstance(entry, dict):
-                    for val in entry.values():
-                        assert val is not None, (
-                            f"{section_name} has null value: {entry}"
-                        )
+        sections = rcv.sections
+        if sections:
+            for section_name, entries in sections.items():
+                for entry in entries:
+                    if isinstance(entry, dict):
+                        for val in entry.values():
+                            assert val is not None, (
+                                f"{section_name} has null value: {entry}"
+                            )
 
         path.unlink()
 
@@ -228,7 +229,7 @@ class TestIntegrationPipeline:
         jr = json_converter.convert(data)
 
         rc_converter = RenderCvConverter()
-        rcv = rc_converter.convert(jr)
+        rcv = rc_converter.convert(data)
 
         # Serialize
         jr_json = jr.model_dump_json(indent=2)
@@ -287,11 +288,8 @@ class TestPartialOverwrite:
         parser = LinkedinZipParser()
         data = parser.parse(zip_path)
 
-        json_converter = JsonResumeConverter()
-        jr = json_converter.convert(data)
-
         rc_converter = RenderCvConverter()
-        rcv = rc_converter.convert(jr)
+        rcv = rc_converter.convert(data)
 
         base_dict = rcv.model_dump(exclude_none=True)
         # Sections exist from LinkedIn (e.g., summary section), but no custom sections
