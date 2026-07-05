@@ -24,6 +24,13 @@ class Converter(ABC):
     the output of the JsonResumeConverter stage.
     """
 
+    tiobe_override: frozenset[str] | None = None
+    """Optional TIOBE language list override for programming language detection.
+
+    If set, replaces the default TIOBE_TOP_50 set when checking if a skill
+    is a programming language.
+    """
+
     @abstractmethod
     def convert(self, data: Any) -> Any:
         """Convert input data to the target format model.

@@ -12,7 +12,15 @@ description = "Remove all generated and cache files"
 
 [tasks.test]
 run = "uvx pytest"
-description = "Run tests with coverage"
+description = "Run tests quickly (no coverage)"
+
+[tasks.test-coverage]
+run = "uvx pytest --cov=linkedinto --cov-report=term-missing --cov-fail-under=80"
+description = "Run tests with coverage report (minimum 80%)"
+
+[tasks.coverage-report]
+run = "uvx pytest --cov=linkedinto --cov-report=html --cov-report=xml && echo 'Coverage report available at htmlcov/index.html'"
+description = "Generate HTML and XML coverage reports"
 
 [tasks.lint]
 run = "uvx ruff check src/ tests/"

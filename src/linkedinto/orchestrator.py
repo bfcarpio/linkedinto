@@ -6,6 +6,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from linkedinto.config import apply_profile_config, get_tiobe_override, load_config
 from linkedinto.constants import (
     JSONRESUME_SCHEMA_URL,
     RENDERC_YAML_FILE,
@@ -32,7 +33,9 @@ _CONVERTERS: list[Converter] = [
 ]
 
 
-def _run_converters(parsed: LinkedInData) -> dict[str, Any]:
+def _run_converters(
+    parsed: LinkedInData, tiobe_override: frozenset[str] | None = None
+) -> dict[str, Any]:
     """Run all registered converters against parsed LinkedIn data.
 
     Each converter declares its input dependency via ``requires``.
@@ -58,6 +61,10 @@ def _run_converters(parsed: LinkedInData) -> dict[str, Any]:
                 raise ValueError(msg) from None
         else:
             input_data = parsed
+
+        # Set tiobe_override if converter has this attribute
+        if hasattr(converter, "tiobe_override"):
+            converter.tiobe_override = tiobe_override
 
         output = converter.convert(input_data)
         outputs[name] = output
@@ -89,9 +96,50 @@ def run(
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
 
+    # Load configuration
+    config = load_config()
+    tiobe_override = get_tiobe_override(config)
+
     parser = LinkedinZipParser()
     data = parser.parse(zip_path)
-    models = _run_converters(data)
+
+    # Apply configuration overrides to profile data
+    if config and data.profile:
+        # Convert ProfileRow to dict for apply_profile_config
+        # Include all fields even if None, so config can override None values
+        profile_dict = {
+            field_name: getattr(data.profile, field_name, None)
+            for field_name in [
+                "first_name",
+                "last_name",
+                "address",
+                "zip_code",
+                "geo_location",
+                "occupation",
+                "summary",
+                "industry",
+                "country",
+                "country_code",
+                "email_address",
+                "phone_number",
+                "twitter",
+                "linkedin",
+                "websites",
+                "headline",
+            ]
+        }
+
+        # Apply config overrides
+        updated_profile_dict = apply_profile_config(config, profile_dict)
+
+        # Convert back to ProfileRow
+        for field_name, field_value in updated_profile_dict.items():
+            if hasattr(data.profile, field_name):
+                # Keep None values as None, empty strings as empty strings
+                setattr(data.profile, field_name, field_value)
+
+    # Run converters with TIOBE override
+    models = _run_converters(data, tiobe_override=tiobe_override)
 
     resume = models.get("jsonresume")
     rc_model = models.get("rendercv")
