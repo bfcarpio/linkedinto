@@ -10,6 +10,7 @@ dist/
 
 # Tooling
 .pytest_cache/
+.coverage
 .ruff_cache/
 .ty/
 .mypy_cache/
