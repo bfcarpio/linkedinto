@@ -8,7 +8,7 @@ Convert a LinkedIn export ZIP to [JSON Resume](https://jsonresume.org/) and [Ren
 linkedinto convert /path/to/LinkedInExport.zip
 ```
 
-This parses the LinkedIn export and outputs `resume.json` (JSON Resume) and `cv.yaml` (RenderCV YAML) in the current directory.
+This parses the LinkedIn export and outputs `resume.json` (JSON Resume) and `rendercv.yaml` (RenderCV YAML) in the current directory.
 
 ### Options
 
