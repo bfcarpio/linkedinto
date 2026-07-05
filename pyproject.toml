@@ -1,9 +1,9 @@
 [project]
 name = "linkedinto"
 version = "0.0.0"
-description = "Convert LinkedIn export ZIP to JSON Resume and RenderCV"
+description = "Convert LinkedIn export ZIP to other formats e.g. JSON Resume and RenderCV"
 readme = "README.md"
-license = "MIT"
+license = "BSD-3-Clause"
 authors = [
     { name = "Brendan Carpio", email = "bfcarpio.git@mailgw.com" }
 ]
@@ -11,7 +11,7 @@ requires-python = ">=3.12"
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: BSD License",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
