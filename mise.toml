@@ -11,15 +11,15 @@ run = "rm -rf dist/ .pytest_cache/ .ruff_cache/ .ty/ __pycache__/ **/__pycache__
 description = "Remove all generated and cache files"
 
 [tasks.test]
-run = "uvx pytest"
+run = "uv run pytest"
 description = "Run tests quickly (no coverage)"
 
 [tasks.test-coverage]
-run = "uvx pytest --cov=linkedinto --cov-report=term-missing --cov-fail-under=80"
+run = "uv run pytest --cov=linkedinto --cov-report=term-missing --cov-fail-under=80"
 description = "Run tests with coverage report (minimum 80%)"
 
 [tasks.coverage-report]
-run = "uvx pytest --cov=linkedinto --cov-report=html --cov-report=xml && echo 'Coverage report available at htmlcov/index.html'"
+run = "uv run pytest --cov=linkedinto --cov-report=html --cov-report=xml && echo 'Coverage report available at htmlcov/index.html'"
 description = "Generate HTML and XML coverage reports"
 
 [tasks.lint]
