@@ -1,0 +1,27 @@
+[tools]
+prek = "latest"
+python = "3.14"
+uv = "latest"
+
+[settings]
+python.uv_venv_auto = "source"
+
+[tasks.clean]
+run = "rm -rf dist/ .pytest_cache/ .ruff_cache/ .ty/ __pycache__/ **/__pycache__/ linkedinto.egg-info/ .prek_cache/"
+description = "Remove all generated and cache files"
+
+[tasks.test]
+run = "uv run pytest"
+description = "Run tests with coverage"
+
+[tasks.lint]
+run = "uv run ruff check src/ tests/"
+description = "Run ruff linter"
+
+[tasks.format-check]
+run = "ruff format --check --respect-gitignore --exclude tests/fixtures/"
+description = "Check formatting with ruff"
+
+[tasks.typecheck]
+run = "uv run python -m ty check src/ tests/"
+description = "Run type checker"

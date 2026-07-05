@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+*.egg
+.venv/
+.uv/
+
+# Tooling
+.pytest_cache/
+.ruff_cache/
+.ty/
+.mypy_cache/
+.pre-commit/
+.prek_cache/
+
+# Environment
+.env
+.env.local
+*.swp
+*.swo
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+resume.json
+rendercv.yaml

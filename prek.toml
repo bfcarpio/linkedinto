@@ -1,0 +1,33 @@
+[[repos]]
+repo = "local"
+
+[[repos.hooks]]
+id = "ruff check"
+name = "ruff check"
+types = ["python"]
+language = "system"
+entry = "ruff check --fix src/ tests/"
+
+[[repos.hooks]]
+id = "ruff format"
+name = "ruff format"
+types = ["python"]
+language = "system"
+entry = "ruff format --check --exclude tests/fixtures/"
+
+[[repos.hooks]]
+id = "ty check"
+name = "ty check"
+types = ["python"]
+language = "system"
+entry = "ty check src/ tests/"
+
+[[repos]]
+repo = "https://github.com/pre-commit/pre-commit-hooks"
+rev = "v5.0.0"
+
+[[repos.hooks]]
+id = "check-yaml"
+
+[[repos.hooks]]
+id = "end-of-file-fixer"
