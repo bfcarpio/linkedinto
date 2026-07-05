@@ -3,6 +3,8 @@
 Uses an embedded TIOBE top-50 list (snapshot: June 2026) as the primary
 classifier. Falls back to Pygments lexers (loaded dynamically) for any
 skill name not found in the TIOBE list.
+
+Supports custom TIOBE override via the tiobe_override parameter.
 """
 
 from __future__ import annotations
@@ -91,40 +93,54 @@ def _pygments_has_lexer(name: str) -> bool:
 
 
 @cache
-def _check_language(name: str) -> bool:
+def _check_language(name: str, tiobe_set: frozenset[str] = TIOBE_TOP_50) -> bool:
     """Core check with caching via lru_cache.
 
     Args:
         name: The skill name to check.
+        tiobe_set: Set of programming language names to check against.
+                     Defaults to TIOBE_TOP_50.
 
     Returns:
         True if the name matches a known programming language.
     """
     lower = name.strip().lower()
 
-    # Fast path: TIOBE top 50
-    if lower in TIOBE_TOP_50:
+    # Fast path: TIOBE top 50 or custom set
+    if lower in tiobe_set:
         return True
 
     # Slow path: Pygments fallback
     return _pygments_has_lexer(name)
 
 
-def is_programming_language(name: str) -> bool:
+def is_programming_language(
+    name: str, tiobe_override: frozenset[str] | None = None
+) -> bool:
     """Check if a skill name is a known programming language.
 
-    Checks the TIOBE top-50 list first (fast path), then falls back
-    to Pygments lexer lookup (slow path, loaded dynamically).
+    Uses TIOBE top-50 list first (fast path), falls back to Pygments lexer lookup
+    (slow path, loaded dynamically). Supports custom TIOBE override via configuration.
 
     The TIOBE list snapshot should be updated periodically (see README).
 
     Args:
         name: The skill name to check.
+        tiobe_override: Optional custom set of programming language names.
+                        If None, uses the default TIOBE_TOP_50 set.
+                        If provided, uses the provided set.
 
     Returns:
         True if the name matches a known programming language.
     """
+    # Early exit: empty name
     if not name or not name.strip():
         return False
 
-    return _check_language(name)
+    # Use override if provided, otherwise default to TIOBE_TOP_50
+    if tiobe_override is None:
+        tiobe_set = TIOBE_TOP_50
+    else:
+        # Convert to lowercase for case-insensitive matching, matching TIOBE_TOP_50 format
+        tiobe_set = frozenset(lang.lower() for lang in tiobe_override)
+    return _check_language(name, tiobe_set)

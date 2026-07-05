@@ -1,0 +1,49 @@
+# Example linkedinto.toml configuration file
+# Copy this file to linkedinto.toml in your project directory and customize as needed.
+
+# Complete replacement for TIOBE_TOP_50 frozenset (all-or-nothing)
+# If provided, this list replaces the entire built-in TIOBE language list.
+tiobe_override = [
+    "JavaScript",
+    "Python",
+    "Java",
+    "C++",
+    "Go",
+    "Rust",
+    "TypeScript",
+    "C#",
+    "Swift",
+    "Kotlin",
+]
+
+# Identity fields matching ProfileRow in domain.py
+# These values take highest precedence over extracted LinkedIn data.
+# Only specify fields you want to override.
+
+# Basic identity information
+first_name = "John"
+last_name = "Doe"
+
+# Contact information
+email_address = "john.doe@example.com"
+phone_number = "+1-555-123-4567"
+
+# Location
+address = "123 Main Street"
+zip_code = "12345"
+geo_location = "San Francisco, CA"
+country = "United States"
+country_code = "US"
+
+# Professional information
+occupation = "Senior Software Engineer"
+headline = "Full-Stack Developer | Cloud Architecture | Distributed Systems"
+summary = """
+Experienced software engineer with 8+ years in full-stack development, 
+cloud architecture, and distributed systems. Passionate about building 
+scalable applications and mentoring junior engineers.
+"""
+industry = "Technology"
+linkedin = "https://linkedin.com/in/johndoe"
+twitter = "@johndoe"
+websites = "https://github.com/johndoe,https://johndoe.dev"

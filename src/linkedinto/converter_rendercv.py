@@ -134,7 +134,9 @@ class RenderCvConverter(Converter):
         non_prog_skills: list[tuple[str, str]] = []  # (name, proficiency)
 
         for s in skills:
-            if s.name and is_programming_language(s.name):
+            if s.name and is_programming_language(
+                s.name, tiobe_override=self.tiobe_override
+            ):
                 prog_skills.append(s.name)
             elif s.name:
                 non_prog_skills.append((s.name, s.proficiency or ""))
