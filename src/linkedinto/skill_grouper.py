@@ -18,7 +18,10 @@ from typing import Required, TypedDict, override
 
 from linkedinto.config import AI_API_KEY_ENV_VAR, AiConfig
 from linkedinto.exceptions import AiGroupingError
-from linkedinto.language_detector import is_programming_language
+from linkedinto.language_detector import (
+    is_programming_language,
+    normalize_language_name,
+)
 from linkedinto.logger import setup_logger
 
 _logger = setup_logger(__name__)
@@ -197,7 +200,7 @@ class SkillGrouper(Grouper):
             for s in unpreset
             if is_programming_language(s, tiobe_override=self._tiobe_override)
         ]
-        prog_langs = preset_prog_langs + detected
+        prog_langs = preset_prog_langs + [normalize_language_name(s) for s in detected]
         non_prog = [s for s in unpreset if s not in set(detected)]
 
         _logger.info(

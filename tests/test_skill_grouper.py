@@ -119,6 +119,18 @@ class TestSkillGrouper:
         user_msg = calls[0]["messages"][1]["content"]
         assert user_msg == KUBERNETES
 
+    def test_programming_language_name_normalized_in_output(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[_RecordedCall] = []
+        _patch_completion(monkeypatch, {DEVOPS: [KUBERNETES]}, calls)
+        grouper = _grouper(tmp_path)
+        result = grouper.group(["Python", "Go (Programming Language)", KUBERNETES])
+
+        # Suffix stripped → "Go"; Python passes through unchanged.
+        assert result[PROGRAMMING_LANGUAGES] == ["Python", "Go"]
+        assert result[DEVOPS] == [KUBERNETES]
+
     def test_all_programming_languages_skips_llm(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

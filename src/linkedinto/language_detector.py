@@ -9,6 +9,7 @@ Supports custom TIOBE override via the tiobe_override parameter.
 
 from __future__ import annotations
 
+import re
 from functools import cache
 from importlib import import_module
 
@@ -71,6 +72,28 @@ TIOBE_TOP_50: frozenset[str] = frozenset(
     }
 )
 
+# LinkedIn disambiguates ambiguous short skill names (Go, C, R, D) by
+# appending " (Programming Language)"; "Golang" is a common alias for Go.
+# Normalize these to canonical names so detection (fast path) and display
+# output both collapse to a single canonical form.
+_PARENTHETICAL_RE = re.compile(r"\s*\(programming language\)\s*$", re.IGNORECASE)
+# Maps a lowercase skill name to its canonical display name.
+_LANGUAGE_ALIASES: dict[str, str] = {
+    "golang": "Go",
+}
+
+
+def normalize_language_name(name: str) -> str:
+    """Return the canonical display name for a programming language skill.
+
+    Strips LinkedIn's disambiguation suffix ("Go (Programming Language)" →
+    "Go") and resolves aliases ("Golang" → "Go"), preserving the original
+    casing of the base name when no alias applies ("go" → "go").
+    """
+    base = _PARENTHETICAL_RE.sub("", name.strip()).strip()
+    canonical = _LANGUAGE_ALIASES.get(base.lower())
+    return canonical if canonical is not None else base
+
 
 def _pygments_has_lexer(name: str) -> bool:
     """Check if Pygments has a lexer for the given name."""
@@ -104,14 +127,16 @@ def _check_language(name: str, tiobe_set: frozenset[str] = TIOBE_TOP_50) -> bool
     Returns:
         True if the name matches a known programming language.
     """
-    lower = name.strip().lower()
+    canonical = normalize_language_name(name)
+    lower = canonical.lower()
 
     # Fast path: TIOBE top 50 or custom set
     if lower in tiobe_set:
         return True
 
-    # Slow path: Pygments fallback
-    return _pygments_has_lexer(name)
+    # Slow path: Pygments fallback (uses normalized name so parentheticals
+    # don't block lexer lookup)
+    return _pygments_has_lexer(canonical)
 
 
 def is_programming_language(
