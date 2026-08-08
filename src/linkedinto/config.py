@@ -13,6 +13,7 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field
 
 from linkedinto.logger import setup_logger
+from linkedinto.phone_utils import Phone
 
 # Setup module logger
 logger = setup_logger(__name__)
@@ -237,8 +238,8 @@ def get_tiobe_override(config: LinkedIntoConfig | None) -> frozenset[str] | None
 
 
 def apply_profile_config(
-    config: LinkedIntoConfig | None, profile_row: dict[str, str | None]
-) -> dict[str, str | None]:
+    config: LinkedIntoConfig | None, profile_row: dict[str, str | Phone | None]
+) -> dict[str, str | Phone | None]:
     """Apply configuration overrides to profile data.
 
     Configuration values take highest precedence over extracted LinkedIn data.
@@ -264,8 +265,14 @@ def apply_profile_config(
         if field_name in ("tiobe_override", "ai"):
             continue
 
-        # Apply override (field_name is guaranteed to exist on config
-        # since we're iterating over config.model_dump())
-        updated_profile[field_name] = field_value
+        # Phone numbers come in as raw strings from TOML; normalize to
+        # Phone so downstream converters receive the value object, not a
+        # raw string from the LinkedIn CSV path.
+        if field_name == "phone_number" and isinstance(field_value, str):
+            updated_profile[field_name] = Phone.from_raw(field_value)
+        else:
+            # Apply override (field_name is guaranteed to exist on config
+            # since we're iterating over config.model_dump())
+            updated_profile[field_name] = field_value
 
     return updated_profile

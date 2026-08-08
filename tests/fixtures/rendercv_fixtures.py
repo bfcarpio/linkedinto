@@ -13,6 +13,7 @@ from linkedinto.domain import (
     PublicationRow,
     SkillRow,
 )
+from linkedinto.phone_utils import Phone
 
 # Scenario: all fields populated (maps to current FULL_RESUME)
 FULL_PROFILE: ProfileRow = ProfileRow(
@@ -22,7 +23,7 @@ FULL_PROFILE: ProfileRow = ProfileRow(
     occupation="Software Engineer",
     geo_location="San Francisco, CA",
     email_address="john@example.com",
-    phone_number="+1 650-555-1234",
+    phone_number=Phone.from_raw("+1 650-555-1234"),
     summary="Full-stack engineer with 10 years experience",
     linkedin="johnsmith",
     twitter="johnsmith_dev",

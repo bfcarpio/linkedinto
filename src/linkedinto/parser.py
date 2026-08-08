@@ -32,6 +32,7 @@ from linkedinto.domain import (
     VolunteerRow,
 )
 from linkedinto.exceptions import LinkedInParserError
+from linkedinto.phone_utils import Phone
 from linkedinto.url_extractor import extract_url
 
 RECOMMENDATION_VISIBLE = "visible"
@@ -223,7 +224,7 @@ class LinkedinZipParser:
             country=row.get("Country"),
             country_code=row.get("CountryCode"),
             email_address=row.get("Email"),
-            phone_number=row.get("Phone"),
+            phone_number=Phone.from_raw(row.get("Phone")),
             twitter=row.get("Twitter"),
             linkedin=extract_url(row.get("LinkedIn")),
             websites=row.get("Websites"),

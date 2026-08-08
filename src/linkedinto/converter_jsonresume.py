@@ -66,7 +66,7 @@ class JsonResumeConverter(Converter):
                 name=name,
                 label=p.headline or p.occupation,
                 email=p.email_address,
-                phone=p.phone_number,
+                phone=p.phone_number.international if p.phone_number else None,
                 summary=p.summary,
                 location=location,
                 profiles=profiles,

@@ -64,7 +64,7 @@ class RenderCvConverter(Converter):
             "headline": p.headline or p.occupation,
             "location": p.geo_location,
             "email": p.email_address,
-            "phone": p.phone_number,
+            "phone": p.phone_number.e164 if p.phone_number else None,
             "website": None,
             "social_networks": [],
             "sections": {},
