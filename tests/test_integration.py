@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import os
-import tempfile
-import zipfile
 from pathlib import Path
 
 import pytest
@@ -14,129 +11,93 @@ from linkedinto.converter_jsonresume import JsonResumeConverter
 from linkedinto.converter_rendercv import RenderCvConverter
 from linkedinto.overwriter import overwrite
 from linkedinto.parser import LinkedinZipParser
-
-FIXTURES = Path(__file__).parent / "fixtures"
-
-
-def _load_fixture(name: str) -> str:
-    """Load a fixture CSV file content."""
-    return (FIXTURES / name).read_text(encoding="utf-8")
-
-
-def _make_multi_csv_zip(csv_files: dict[str, str]) -> Path:
-    """Create a ZIP containing multiple CSV files (one per section)."""
-    fd, path = tempfile.mkstemp(suffix=".zip")
-    os.close(fd)
-    with zipfile.ZipFile(path, "w") as zf:
-        for csv_name, content in csv_files.items():
-            zf.writestr(csv_name, content)
-    return Path(path)
+from tests.conftest import _load_fixture
 
 
 class TestMultiCsvParser:
     """Test parser with real LinkedIn multi-CSV format."""
 
-    def test_parse_profile(self) -> None:
+    def test_parse_profile(self, make_zip) -> None:
         csvs = {"Profile.csv": _load_fixture("minimal_profile.csv")}
-        path = _make_multi_csv_zip(csvs)
+        path = make_zip(csvs)
         parser = LinkedinZipParser()
         data = parser.parse(path)
         assert data.profile is not None
         assert data.profile.first_name == "John"
         assert data.profile.last_name == "Smith"
         assert data.profile.occupation == "Software Engineer"
-        path.unlink()
 
-    def test_parse_positions(self) -> None:
+    def test_parse_positions(self, make_zip) -> None:
         csvs = {"Positions.csv": _load_fixture("minimal_positions.csv")}
-        path = _make_multi_csv_zip(csvs)
+        path = make_zip(csvs)
         parser = LinkedinZipParser()
         data = parser.parse(path)
         assert len(data.positions) == 1
         assert data.positions[0].company == "Acme Corp"
         assert data.positions[0].position == "Senior Dev"
-        path.unlink()
 
-    def test_parse_skills(self) -> None:
+    def test_parse_skills(self, make_zip) -> None:
         csvs = {"Skills.csv": _load_fixture("minimal_skills.csv")}
-        path = _make_multi_csv_zip(csvs)
+        path = make_zip(csvs)
         parser = LinkedinZipParser()
         data = parser.parse(path)
         assert len(data.skills) == 6
         names = [s.name for s in data.skills]
         assert "Python" in names
         assert "Rust" in names
-        path.unlink()
 
-    def test_parse_education(self) -> None:
+    def test_parse_education(self, make_zip) -> None:
         csvs = {"Education.csv": _load_fixture("minimal_education.csv")}
-        path = _make_multi_csv_zip(csvs)
+        path = make_zip(csvs)
         parser = LinkedinZipParser()
         data = parser.parse(path)
         assert len(data.education) == 1
         assert data.education[0].school == "MIT"
-        path.unlink()
 
-    def test_parse_languages(self) -> None:
+    def test_parse_languages(self, make_zip) -> None:
         csvs = {"Languages.csv": _load_fixture("minimal_languages.csv")}
-        path = _make_multi_csv_zip(csvs)
+        path = make_zip(csvs)
         parser = LinkedinZipParser()
         data = parser.parse(path)
         assert len(data.languages) == 2
         names = [lang.name for lang in data.languages]
         assert "English" in names
-        path.unlink()
 
-    def test_parse_complete_profile(self) -> None:
+    def test_parse_complete_profile(self, minimal_multi_csv_zip: Path) -> None:
         """Test parsing all sections together (real export simulation)."""
-        csvs = {
-            "Profile.csv": _load_fixture("minimal_profile.csv"),
-            "Positions.csv": _load_fixture("minimal_positions.csv"),
-            "Education.csv": _load_fixture("minimal_education.csv"),
-            "Skills.csv": _load_fixture("minimal_skills.csv"),
-            "Languages.csv": _load_fixture("minimal_languages.csv"),
-        }
-        path = _make_multi_csv_zip(csvs)
         parser = LinkedinZipParser()
-        data = parser.parse(path)
+        data = parser.parse(minimal_multi_csv_zip)
         assert data.profile is not None
         assert data.profile.first_name == "John"
         assert len(data.positions) == 1
         assert len(data.education) == 1
         assert len(data.skills) == 6
         assert len(data.languages) == 2
-        path.unlink()
 
-    def test_ignores_non_section_csvs(self) -> None:
+    def test_ignores_non_section_csvs(self, make_zip) -> None:
         """CSVs that don't match any section handler should be ignored."""
-        csvs = {
-            "Profile.csv": _load_fixture("minimal_profile.csv"),
-            "Ad_Targeting.csv": "Interest,Value\nTech,High\n",
-            "Company Follows.csv": "Name,Followed On\nAcme,2024-01\n",
-        }
-        path = _make_multi_csv_zip(csvs)
+        path = make_zip(
+            {
+                "Profile.csv": _load_fixture("minimal_profile.csv"),
+                "Ad_Targeting.csv": "Interest,Value\nTech,High\n",
+                "Company Follows.csv": "Name,Followed On\nAcme,2024-01\n",
+            }
+        )
         parser = LinkedinZipParser()
         data = parser.parse(path)
         # Profile should still be parsed; unknown CSVs silently skipped
         assert data.profile is not None
         assert data.profile.first_name == "John"
-        path.unlink()
 
 
 class TestIntegrationPipeline:
     """End-to-end integration tests: parser → converters → output."""
 
-    def test_full_pipeline_produces_nonempty_jsonresume(self) -> None:
-        csvs = {
-            "Profile.csv": _load_fixture("minimal_profile.csv"),
-            "Positions.csv": _load_fixture("minimal_positions.csv"),
-            "Education.csv": _load_fixture("minimal_education.csv"),
-            "Skills.csv": _load_fixture("minimal_skills.csv"),
-            "Languages.csv": _load_fixture("minimal_languages.csv"),
-        }
-        path = _make_multi_csv_zip(csvs)
+    def test_full_pipeline_produces_nonempty_jsonresume(
+        self, minimal_multi_csv_zip: Path
+    ) -> None:
         parser = LinkedinZipParser()
-        data = parser.parse(path)
+        data = parser.parse(minimal_multi_csv_zip)
 
         json_converter = JsonResumeConverter()
         jr = json_converter.convert(data)
@@ -157,15 +118,14 @@ class TestIntegrationPipeline:
         assert len((rcv.sections or {}).get("experience", [])) == 1
         assert len((rcv.sections or {}).get("education", [])) == 1
 
-        path.unlink()
-
-    def test_output_has_no_empty_sections(self) -> None:
+    def test_output_has_no_empty_sections(self, make_zip) -> None:
         """Regression test: no 'summary': [None] or empty arrays with nulls."""
-        csvs = {
-            "Profile.csv": _load_fixture("minimal_profile.csv"),
-            "Positions.csv": _load_fixture("minimal_positions.csv"),
-        }
-        path = _make_multi_csv_zip(csvs)
+        path = make_zip(
+            {
+                "Profile.csv": _load_fixture("minimal_profile.csv"),
+                "Positions.csv": _load_fixture("minimal_positions.csv"),
+            }
+        )
         parser = LinkedinZipParser()
         data = parser.parse(path)
 
@@ -207,22 +167,12 @@ class TestIntegrationPipeline:
                                 f"{section_name} has null value: {entry}"
                             )
 
-        path.unlink()
-
-    def test_convert_uses_real_format_produces_output(self) -> None:
+    def test_convert_uses_real_format_produces_output(
+        self, minimal_multi_csv_zip: Path
+    ) -> None:
         """Test that multi-CSV format goes through the full conversion pipeline."""
-        csvs = {
-            "Profile.csv": _load_fixture("minimal_profile.csv"),
-            "Positions.csv": _load_fixture("minimal_positions.csv"),
-            "Education.csv": _load_fixture("minimal_education.csv"),
-            "Skills.csv": _load_fixture("minimal_skills.csv"),
-            "Languages.csv": _load_fixture("minimal_languages.csv"),
-        }
-        zip_path = _make_multi_csv_zip(csvs)
-
-        # Run parser
         parser = LinkedinZipParser()
-        data = parser.parse(zip_path)
+        data = parser.parse(minimal_multi_csv_zip)
 
         # Run conversion
         json_converter = JsonResumeConverter()
@@ -250,16 +200,13 @@ class TestIntegrationPipeline:
         # RenderCV should contain real data, not empty
         assert "Acme Corp" in rcv_yaml or "Acme" in rcv_yaml
 
-        zip_path.unlink()
-
 
 class TestPartialOverwrite:
     """Integration tests for the partial file override functionality."""
 
-    def test_overwrite_json_resume_basics(self) -> None:
+    def test_overwrite_json_resume_basics(self, make_zip) -> None:
         """Partial JSON Resume overrides basics fields."""
-        csvs = {"Profile.csv": _load_fixture("minimal_profile.csv")}
-        zip_path = _make_multi_csv_zip(csvs)
+        zip_path = make_zip({"Profile.csv": _load_fixture("minimal_profile.csv")})
         parser = LinkedinZipParser()
         data = parser.parse(zip_path)
 
@@ -279,12 +226,9 @@ class TestPartialOverwrite:
         assert merged["basics"]["summary"] == "Custom summary from partial"
         assert "name" not in merged["basics"]  # replaced wholesale
 
-        zip_path.unlink()
-
-    def test_overwrite_render_cv_sections(self) -> None:
+    def test_overwrite_render_cv_sections(self, make_zip) -> None:
         """Partial RenderCV overrides sections."""
-        csvs = {"Profile.csv": _load_fixture("minimal_profile.csv")}
-        zip_path = _make_multi_csv_zip(csvs)
+        zip_path = make_zip({"Profile.csv": _load_fixture("minimal_profile.csv")})
         parser = LinkedinZipParser()
         data = parser.parse(zip_path)
 
@@ -311,20 +255,19 @@ class TestPartialOverwrite:
         assert "custom" in merged["cv"]["sections"]
         assert merged["cv"]["sections"]["custom"][0]["label"] == "Custom Section"
 
-        zip_path.unlink()
-
-    def test_full_pipeline_with_partial_jsonresume(self) -> None:
+    def test_full_pipeline_with_partial_jsonresume(self, make_zip) -> None:
         """The run() orchestrator accepts and applies partial JSON Resume."""
         import json
         import tempfile
 
         from linkedinto.orchestrator import run
 
-        csvs = {
-            "Profile.csv": _load_fixture("minimal_profile.csv"),
-            "Skills.csv": _load_fixture("minimal_skills.csv"),
-        }
-        zip_path = _make_multi_csv_zip(csvs)
+        zip_path = make_zip(
+            {
+                "Profile.csv": _load_fixture("minimal_profile.csv"),
+                "Skills.csv": _load_fixture("minimal_skills.csv"),
+            }
+        )
 
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create a partial JSON Resume file
@@ -349,9 +292,7 @@ class TestPartialOverwrite:
             # The override replaced basics entirely
             assert output["basics"]["summary"] == "Overridden summary"
 
-        zip_path.unlink()
-
-    def test_full_pipeline_with_partial_rendercv(self) -> None:
+    def test_full_pipeline_with_partial_rendercv(self, make_zip) -> None:
         """The run() orchestrator accepts and applies partial RenderCV YAML."""
         import tempfile
 
@@ -359,8 +300,7 @@ class TestPartialOverwrite:
 
         from linkedinto.orchestrator import run
 
-        csvs = {"Profile.csv": _load_fixture("minimal_profile.csv")}
-        zip_path = _make_multi_csv_zip(csvs)
+        zip_path = make_zip({"Profile.csv": _load_fixture("minimal_profile.csv")})
 
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create a partial RenderCV file
@@ -396,17 +336,14 @@ class TestPartialOverwrite:
             assert "custom" in output["cv"]["sections"]
             assert output["cv"]["sections"]["custom"][0]["label"] == "Volunteer Work"
 
-        zip_path.unlink()
-
-    def test_prefer_partial_over_linkedin_data(self) -> None:
+    def test_prefer_partial_over_linkedin_data(self, make_zip) -> None:
         """Partial values take precedence over LinkedIn values at top level."""
         import json
         import tempfile
 
         from linkedinto.orchestrator import run
 
-        csvs = {"Profile.csv": _load_fixture("minimal_profile.csv")}
-        zip_path = _make_multi_csv_zip(csvs)
+        zip_path = make_zip({"Profile.csv": _load_fixture("minimal_profile.csv")})
 
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create partial with different basics
@@ -433,17 +370,14 @@ class TestPartialOverwrite:
             assert output["basics"]["email"] == "jane@example.com"
             assert output["basics"]["summary"] == "Overridden"
 
-        zip_path.unlink()
-
-    def test_partial_file_not_found_raises_error(self) -> None:
+    def test_partial_file_not_found_raises_error(self, make_zip) -> None:
         """Passing a non-existent partial file raises an error."""
         import tempfile
 
         from linkedinto.exceptions import LinkedIntoError
         from linkedinto.orchestrator import run
 
-        csvs = {"Profile.csv": _load_fixture("minimal_profile.csv")}
-        zip_path = _make_multi_csv_zip(csvs)
+        zip_path = make_zip({"Profile.csv": _load_fixture("minimal_profile.csv")})
 
         with tempfile.TemporaryDirectory() as tmpdir:
             nonexistent = Path(tmpdir) / "nonexistent.json"
@@ -454,12 +388,9 @@ class TestPartialOverwrite:
                     partial_jsonresume=nonexistent,
                 )
 
-        zip_path.unlink()
-
-    def test_convert_linkedin_data_no_overwrite(self) -> None:
+    def test_convert_linkedin_data_no_overwrite(self, make_zip) -> None:
         """Conversion produces data without any override."""
-        csvs = {"Profile.csv": _load_fixture("minimal_profile.csv")}
-        zip_path = _make_multi_csv_zip(csvs)
+        zip_path = make_zip({"Profile.csv": _load_fixture("minimal_profile.csv")})
         parser = LinkedinZipParser()
         data = parser.parse(zip_path)
 
@@ -469,5 +400,3 @@ class TestPartialOverwrite:
         assert jr.basics.name == "John Smith"
         # The minimal_profile fixture includes a summary
         assert jr.basics.summary == "Full-stack engineer with 10 years experience"
-
-        zip_path.unlink()
