@@ -47,28 +47,27 @@ class TestRenderCvConverter:
         assert experience_entry.company == "Acme Corp"
 
     def test_skills_split(self) -> None:
-        """Programming languages go to technologies, others to skills."""
+        """All skills go to a single skills section as OneLineEntry entries."""
         converter = RenderCvConverter()
         result = converter.convert(full_profile_fixture())
-        assert result.sections is not None and "technologies" in result.sections
         assert result.sections is not None and "skills" in result.sections
-
-        tech_section = result.sections.get("technologies")
-        assert tech_section is not None
-
-        tech_entry: Any = tech_section[0]
-        tech_detail: str = str(tech_entry.details)
-        assert "Python" in tech_detail
-        assert "TypeScript" in tech_detail
+        assert "technologies" not in result.sections
 
         skill_section = result.sections.get("skills")
         assert skill_section is not None
-        skill_entry: Any = skill_section[0]
-        skill_detail: str = str(skill_entry.details)
-        assert "Project Management" in skill_detail
+        assert len(skill_section) == 2
+
+        prog_entry: Any = skill_section[0]
+        assert prog_entry.label == "Programming Languages"
+        assert "Python" in str(prog_entry.details)
+        assert "TypeScript" in str(prog_entry.details)
+
+        skills_entry: Any = skill_section[1]
+        assert skills_entry.label == "Skills"
+        assert "Project Management" in str(skills_entry.details)
 
     def test_skills_grouped(self) -> None:
-        """With a skill grouper set, split programming languages into technologies."""
+        """With a skill grouper set, all groups become OneLineEntry in skills."""
 
         class StubGrouper(Grouper):
             @override
@@ -78,25 +77,20 @@ class TestRenderCvConverter:
                     "Leadership": ["Project Management"],
                 }
 
-        from rendercv.schema.models.cv.entries.normal import NormalEntry
-
         converter = RenderCvConverter()
         converter.skill_grouper = StubGrouper()
         result = converter.convert(full_profile_fixture())
 
         assert result.sections is not None
-        assert "technologies" in result.sections
-        tech_section = result.sections.get("technologies")
-        assert tech_section is not None
-        tech_entry = cast(OneLineEntry, tech_section[0])
-        assert tech_entry.label == PROGRAMMING_LANGUAGES
-        assert tech_entry.details == "Python, TypeScript"
+        assert "technologies" not in result.sections
 
         skill_section = result.sections.get("skills")
         assert skill_section is not None
-        entries = cast(list[NormalEntry], skill_section)
-        assert [e.name for e in entries] == ["Leadership"]
-        assert entries[0].highlights == ["Project Management"]
+        entries = cast(list[OneLineEntry], skill_section)
+        assert len(entries) == 2
+        assert [e.label for e in entries] == ["Programming Languages", "Leadership"]
+        assert entries[0].details == "Python, TypeScript"
+        assert entries[1].details == "Project Management"
 
     def test_website_population(self) -> None:
         """Bracket-format websites populates first URL as cv.website."""
