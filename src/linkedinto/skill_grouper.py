@@ -16,7 +16,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Required, TypedDict, override
 
-from linkedinto.config import AiConfig
+from linkedinto.config import AI_API_KEY_ENV_VAR, AiConfig
 from linkedinto.exceptions import AiGroupingError
 from linkedinto.language_detector import is_programming_language
 from linkedinto.logger import setup_logger
@@ -24,6 +24,7 @@ from linkedinto.logger import setup_logger
 _logger = setup_logger(__name__)
 
 PROGRAMMING_LANGUAGES = "Programming Languages"
+OTHER_CATEGORY = "Other"
 LLM_TIMEOUT_SECONDS = 30
 
 CACHE_DIR_NAME = ".cache/linkedinto"
@@ -151,9 +152,13 @@ class SkillGrouper(Grouper):
         self._tiobe_override = tiobe_override
         self._cache: CacheStrategy | None = cache if cache is not None else SkillCache()
         # Resolve API key (don't set litellm.api_key globally — pass per-call)
-        self._api_key: str | None = config.api_key or os.environ.get(
-            "LINKEDINTO_AI_API_KEY"
-        )
+        self._api_key: str | None = config.api_key or os.environ.get(AI_API_KEY_ENV_VAR)
+        # Deterministic skill → category presets (exact-match lookup)
+        self._presets: dict[str, str] = {}
+        if config.skill_groups:
+            for category, preset_skills in config.skill_groups.items():
+                for skill in preset_skills:
+                    self._presets[skill] = category
 
     def disable_cache(self) -> None:
         """Skip the disk cache — force a fresh LLM call on next group()."""
@@ -161,38 +166,66 @@ class SkillGrouper(Grouper):
 
     @override
     def group(self, skills: list[str]) -> dict[str, list[str]]:
-        """Group skills. Returns {} for empty input."""
+        """Group skills. Returns {} for empty input.
+
+        Pipeline: config presets (deterministic, exact match) → TIOBE/Pygments
+        pre-filter → disk cache → LLM. Preset and programming-language skills
+        never reach the LLM.
+        """
         if not skills:
             return {}
 
-        # 1. Pre-filter programming languages (deterministic, no LLM)
-        prog_langs = [
+        # 1. Config presets — exact-match, user-controlled, no LLM.
+        # A preset targeting PROGRAMMING_LANGUAGES is folded into prog_langs
+        # below so the deterministic and preset buckets merge into one.
+        preset_groups: dict[str, list[str]] = {}
+        preset_prog_langs: list[str] = []
+        for skill in skills:
+            category = self._presets.get(skill)
+            if category is None:
+                continue
+            if category == PROGRAMMING_LANGUAGES:
+                preset_prog_langs.append(skill)
+            else:
+                preset_groups.setdefault(category, []).append(skill)
+        unpreset = [s for s in skills if s not in self._presets]
+
+        # 2. Pre-filter programming languages (deterministic, no LLM);
+        #    preset overrides TIOBE detection
+        detected = [
             s
-            for s in skills
+            for s in unpreset
             if is_programming_language(s, tiobe_override=self._tiobe_override)
         ]
-        non_prog = [s for s in skills if s not in set(prog_langs)]
+        prog_langs = preset_prog_langs + detected
+        non_prog = [s for s in unpreset if s not in set(detected)]
 
         _logger.info(
-            "AI skill grouping: %d total → %d programming languages → %d sent to LLM",
+            "AI skill grouping: %d total → %d preset → %d programming languages"
+            " → %d sent to LLM",
             len(skills),
+            len(skills) - len(unpreset),
             len(prog_langs),
             len(non_prog),
         )
 
         if not non_prog:
-            return {PROGRAMMING_LANGUAGES: prog_langs} if prog_langs else {}
+            result = dict(preset_groups)
+            if prog_langs:
+                result[PROGRAMMING_LANGUAGES] = prog_langs
+            return result
 
-        # 2. Check cache
+        # 3. Check cache
         if self._cache is not None:
             cached = self._cache.get(non_prog, self._tiobe_override)
             if cached is not None:
                 _logger.info(
                     "AI skill grouping: cache hit (%d categories)", len(cached)
                 )
-                return self._merge(prog_langs, cached)
+                merged = self._merge(prog_langs, cached)
+                return {**preset_groups, **merged}
 
-        # 3. LLM call
+        # 4. LLM call
         _logger.info(
             "AI skill grouping: calling %s for %d skills...", self._model, len(non_prog)
         )
@@ -202,10 +235,11 @@ class SkillGrouper(Grouper):
             self._cache.set(non_prog, self._tiobe_override, validated)
         _logger.info(
             "AI skill grouping: done (%d categories)",
-            len(validated) + (1 if prog_langs else 0),
+            len(preset_groups) + len(validated) + (1 if prog_langs else 0),
         )
 
-        return self._merge(prog_langs, validated)
+        merged = self._merge(prog_langs, validated)
+        return {**preset_groups, **merged}
 
     def _call_llm(self, skills: list[str]) -> dict[str, list[str]]:
         try:
@@ -286,7 +320,7 @@ class SkillGrouper(Grouper):
         # "Other" category rather than overwriting it)
         missing = input_set - grouped
         if missing:
-            other = validated.setdefault("Other", [])
+            other = validated.setdefault(OTHER_CATEGORY, [])
             other.extend(sorted(missing))
 
         return validated

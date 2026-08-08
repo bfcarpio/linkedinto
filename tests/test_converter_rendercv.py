@@ -8,7 +8,7 @@ from rendercv.schema.models.cv.cv import Cv
 from rendercv.schema.models.cv.entries.experience import ExperienceEntry
 
 from linkedinto.converter_rendercv import RenderCvConverter
-from linkedinto.skill_grouper import Grouper
+from linkedinto.skill_grouper import PROGRAMMING_LANGUAGES, Grouper
 from tests.fixtures.rendercv_fixtures import (
     full_profile_fixture,
     minimal_profile_fixture,
@@ -74,7 +74,7 @@ class TestRenderCvConverter:
             @override
             def group(self, skills: list[str]) -> dict[str, list[str]]:
                 return {
-                    "Programming Languages": ["Python", "TypeScript"],
+                    PROGRAMMING_LANGUAGES: ["Python", "TypeScript"],
                     "Leadership": ["Project Management"],
                 }
 
@@ -90,7 +90,7 @@ class TestRenderCvConverter:
         assert skill_section is not None
         entries = cast(list[NormalEntry], skill_section)
         assert [e.name for e in entries] == [
-            "Programming Languages",
+            PROGRAMMING_LANGUAGES,
             "Leadership",
         ]
         assert entries[0].highlights == ["Python", "TypeScript"]

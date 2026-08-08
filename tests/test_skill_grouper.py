@@ -10,14 +10,19 @@ from typing import NoReturn, TypedDict, Unpack, override
 
 import pytest
 
-from linkedinto.config import AiConfig
+from linkedinto.config import AI_API_KEY_ENV_VAR, DEFAULT_AI_MODEL, AiConfig
 from linkedinto.exceptions import AiGroupingError
 from linkedinto.skill_grouper import (
+    OTHER_CATEGORY,
     PROGRAMMING_LANGUAGES,
     CacheStrategy,
     SkillCache,
     SkillGrouper,
 )
+
+DEVOPS = "DevOps"
+KUBERNETES = "Kubernetes"
+TEAM_LEADERSHIP = "Team Leadership"
 
 
 class _RecordedCall(TypedDict, total=False):
@@ -51,31 +56,37 @@ def _patch_completion(
     monkeypatch.setattr("litellm.completion", fake_completion)
 
 
-def _grouper(tmp_path: Path, *, api_key: str | None = None) -> SkillGrouper:
+def _grouper(
+    tmp_path: Path,
+    *,
+    api_key: str | None = None,
+    skill_groups: dict[str, list[str]] | None = None,
+) -> SkillGrouper:
     """SkillGrouper with an isolated on-disk cache."""
     return SkillGrouper(
-        AiConfig(api_key=api_key), cache=SkillCache(tmp_path / "skill-groups.json")
+        AiConfig(api_key=api_key, skill_groups=skill_groups),
+        cache=SkillCache(tmp_path / "skill-groups.json"),
     )
 
 
 class TestSkillCache:
     def test_round_trip(self, tmp_path: Path) -> None:
         cache = SkillCache(tmp_path / "c.json")
-        value = {"DevOps": ["Docker", "Kubernetes"]}
-        cache.set(["Docker", "Kubernetes"], None, value)
-        assert cache.get(["Docker", "Kubernetes"], None) == value
+        value = {DEVOPS: ["Docker", KUBERNETES]}
+        cache.set(["Docker", KUBERNETES], None, value)
+        assert cache.get(["Docker", KUBERNETES], None) == value
 
     def test_skill_order_irrelevant(self, tmp_path: Path) -> None:
         cache = SkillCache(tmp_path / "c.json")
-        value = {"DevOps": ["Docker"]}
-        cache.set(["Docker", "Kubernetes"], None, value)
-        assert cache.get(["Kubernetes", "Docker"], None) == value
+        value = {DEVOPS: ["Docker"]}
+        cache.set(["Docker", KUBERNETES], None, value)
+        assert cache.get([KUBERNETES, "Docker"], None) == value
 
     def test_tiobe_override_changes_key(self, tmp_path: Path) -> None:
         cache = SkillCache(tmp_path / "c.json")
-        cache.set(["Docker"], None, {"DevOps": ["Docker"]})
+        cache.set(["Docker"], None, {DEVOPS: ["Docker"]})
         assert cache.get(["Docker"], frozenset({"customlang"})) is None
-        assert cache.get(["Docker"], None) == {"DevOps": ["Docker"]}
+        assert cache.get(["Docker"], None) == {DEVOPS: ["Docker"]}
 
     def test_miss_on_empty_cache(self, tmp_path: Path) -> None:
         cache = SkillCache(tmp_path / "c.json")
@@ -83,7 +94,7 @@ class TestSkillCache:
 
     def test_atomic_write_leaves_no_tmp_files(self, tmp_path: Path) -> None:
         cache = SkillCache(tmp_path / "c.json")
-        cache.set(["Docker"], None, {"DevOps": ["Docker"]})
+        cache.set(["Docker"], None, {DEVOPS: ["Docker"]})
         assert (tmp_path / "c.json").exists()
         assert list(tmp_path.glob("*.tmp")) == []
 
@@ -97,16 +108,16 @@ class TestSkillGrouper:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         calls: list[_RecordedCall] = []
-        _patch_completion(monkeypatch, {"DevOps": ["Kubernetes"]}, calls)
+        _patch_completion(monkeypatch, {DEVOPS: [KUBERNETES]}, calls)
 
         grouper = _grouper(tmp_path)
-        result = grouper.group(["Python", "Go", "Kubernetes"])
+        result = grouper.group(["Python", "Go", KUBERNETES])
 
         assert result[PROGRAMMING_LANGUAGES] == ["Python", "Go"]
-        assert result["DevOps"] == ["Kubernetes"]
+        assert result[DEVOPS] == [KUBERNETES]
         # LLM only saw the non-programming skill
         user_msg = calls[0]["messages"][1]["content"]
-        assert user_msg == "Kubernetes"
+        assert user_msg == KUBERNETES
 
     def test_all_programming_languages_skips_llm(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -124,56 +135,56 @@ class TestSkillGrouper:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         calls: list[_RecordedCall] = []
-        _patch_completion(monkeypatch, {"DevOps": ["Kubernetes"]}, calls)
+        _patch_completion(monkeypatch, {DEVOPS: [KUBERNETES]}, calls)
 
         grouper = _grouper(tmp_path)
-        first = grouper.group(["Kubernetes"])
-        second = grouper.group(["Kubernetes"])
+        first = grouper.group([KUBERNETES])
+        second = grouper.group([KUBERNETES])
 
-        assert first == second == {"DevOps": ["Kubernetes"]}
+        assert first == second == {DEVOPS: [KUBERNETES]}
         assert len(calls) == 1
 
     def test_disable_cache_forces_fresh_call(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         calls: list[_RecordedCall] = []
-        _patch_completion(monkeypatch, {"DevOps": ["Kubernetes"]}, calls)
+        _patch_completion(monkeypatch, {DEVOPS: [KUBERNETES]}, calls)
 
         grouper = _grouper(tmp_path)
-        grouper.group(["Kubernetes"])
+        grouper.group([KUBERNETES])
         grouper.disable_cache()
-        grouper.group(["Kubernetes"])
+        grouper.group([KUBERNETES])
 
         assert len(calls) == 2
 
     def test_invented_skills_stripped_missing_go_to_other(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        payload = {"DevOps": ["Kubernetes", "Invented Skill"], "Empty": []}
+        payload = {"DevOps": [KUBERNETES, "Invented Skill"], "Empty": []}
         _patch_completion(monkeypatch, payload, [])
 
         grouper = _grouper(tmp_path)
-        result = grouper.group(["Kubernetes", "Team Leadership"])
+        result = grouper.group([KUBERNETES, TEAM_LEADERSHIP])
 
         assert result == {
-            "DevOps": ["Kubernetes"],
-            "Other": ["Team Leadership"],
+            DEVOPS: [KUBERNETES],
+            OTHER_CATEGORY: [TEAM_LEADERSHIP],
         }
 
     def test_duplicate_skill_in_two_categories_keeps_first(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         payload = {
-            "DevOps": ["Kubernetes", "Team Leadership"],
-            "Management": ["Kubernetes"],
+            "DevOps": [KUBERNETES, TEAM_LEADERSHIP],
+            "Management": [KUBERNETES],
         }
         _patch_completion(monkeypatch, payload, [])
 
         grouper = _grouper(tmp_path)
-        result = grouper.group(["Kubernetes", "Team Leadership"])
+        result = grouper.group([KUBERNETES, TEAM_LEADERSHIP])
 
         assert result == {
-            "DevOps": ["Kubernetes", "Team Leadership"],
+            "DevOps": [KUBERNETES, TEAM_LEADERSHIP],
         }
         # Skill appears in exactly one category
         all_skills = [s for skills in result.values() for s in skills]
@@ -183,56 +194,56 @@ class TestSkillGrouper:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """LLM-provided 'Other' skills must not be lost when gaps are filled."""
-        payload = {"DevOps": ["Kubernetes"], "Other": ["Team Leadership"]}
+        payload = {DEVOPS: [KUBERNETES], OTHER_CATEGORY: [TEAM_LEADERSHIP]}
         _patch_completion(monkeypatch, payload, [])
 
         grouper = _grouper(tmp_path)
-        result = grouper.group(["Kubernetes", "Team Leadership", "Agile Coaching"])
+        result = grouper.group([KUBERNETES, TEAM_LEADERSHIP, "Agile Coaching"])
 
         assert result == {
-            "DevOps": ["Kubernetes"],
-            "Other": ["Team Leadership", "Agile Coaching"],
+            DEVOPS: [KUBERNETES],
+            OTHER_CATEGORY: [TEAM_LEADERSHIP, "Agile Coaching"],
         }
 
     def test_llm_programming_languages_category_merged(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        payload = {PROGRAMMING_LANGUAGES: ["Kubernetes"]}
+        payload = {PROGRAMMING_LANGUAGES: [KUBERNETES]}
         _patch_completion(monkeypatch, payload, [])
 
         grouper = _grouper(tmp_path)
-        result = grouper.group(["Python", "Kubernetes"])
+        result = grouper.group(["Python", KUBERNETES])
 
-        assert result == {PROGRAMMING_LANGUAGES: ["Python", "Kubernetes"]}
+        assert result == {PROGRAMMING_LANGUAGES: ["Python", KUBERNETES]}
 
     def test_tiobe_override_passed_to_prefilter(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         calls: list[_RecordedCall] = []
-        _patch_completion(monkeypatch, {"DevOps": ["Kubernetes"]}, calls)
+        _patch_completion(monkeypatch, {DEVOPS: [KUBERNETES]}, calls)
 
         grouper = SkillGrouper(
             AiConfig(),
             tiobe_override=frozenset({"customlang"}),
             cache=SkillCache(tmp_path / "c.json"),
         )
-        result = grouper.group(["CustomLang", "Kubernetes"])
+        result = grouper.group(["CustomLang", KUBERNETES])
 
         assert result[PROGRAMMING_LANGUAGES] == ["CustomLang"]
-        assert calls[0]["messages"][1]["content"] == "Kubernetes"
+        assert calls[0]["messages"][1]["content"] == KUBERNETES
 
     def test_api_key_from_config_passed_per_call(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         calls: list[_RecordedCall] = []
-        _patch_completion(monkeypatch, {"DevOps": ["Kubernetes"]}, calls)
-        monkeypatch.setenv("LINKEDINTO_AI_API_KEY", "sk-env")
+        _patch_completion(monkeypatch, {DEVOPS: [KUBERNETES]}, calls)
+        monkeypatch.setenv(AI_API_KEY_ENV_VAR, "sk-env")
 
         import litellm
 
         key_before = litellm.api_key
         grouper = _grouper(tmp_path, api_key="sk-config")
-        grouper.group(["Kubernetes"])
+        grouper.group([KUBERNETES])
 
         assert calls[0].get("api_key") == "sk-config"
         assert litellm.api_key == key_before  # never set globally
@@ -241,11 +252,11 @@ class TestSkillGrouper:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         calls: list[_RecordedCall] = []
-        _patch_completion(monkeypatch, {"DevOps": ["Kubernetes"]}, calls)
-        monkeypatch.setenv("LINKEDINTO_AI_API_KEY", "sk-env")
+        _patch_completion(monkeypatch, {DEVOPS: [KUBERNETES]}, calls)
+        monkeypatch.setenv(AI_API_KEY_ENV_VAR, "sk-env")
 
         grouper = _grouper(tmp_path)
-        grouper.group(["Kubernetes"])
+        grouper.group([KUBERNETES])
 
         assert calls[0].get("api_key") == "sk-env"
 
@@ -253,11 +264,11 @@ class TestSkillGrouper:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         calls: list[_RecordedCall] = []
-        _patch_completion(monkeypatch, {"DevOps": ["Kubernetes"]}, calls)
-        monkeypatch.delenv("LINKEDINTO_AI_API_KEY", raising=False)
+        _patch_completion(monkeypatch, {DEVOPS: [KUBERNETES]}, calls)
+        monkeypatch.delenv(AI_API_KEY_ENV_VAR, raising=False)
 
         grouper = _grouper(tmp_path)
-        grouper.group(["Kubernetes"])
+        grouper.group([KUBERNETES])
 
         assert "api_key" not in calls[0]
 
@@ -268,7 +279,7 @@ class TestSkillGrouper:
 
         grouper = _grouper(tmp_path)
         with pytest.raises(AiGroupingError, match="pip install"):
-            grouper.group(["Kubernetes"])
+            grouper.group([KUBERNETES])
 
     def test_llm_failure_raises(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -280,7 +291,7 @@ class TestSkillGrouper:
 
         grouper = _grouper(tmp_path)
         with pytest.raises(AiGroupingError, match="network down"):
-            grouper.group(["Kubernetes"])
+            grouper.group([KUBERNETES])
 
     def test_invalid_json_raises(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -294,7 +305,7 @@ class TestSkillGrouper:
 
         grouper = _grouper(tmp_path)
         with pytest.raises(AiGroupingError, match="invalid JSON"):
-            grouper.group(["Kubernetes"])
+            grouper.group([KUBERNETES])
 
     def test_non_object_json_raises(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -303,22 +314,86 @@ class TestSkillGrouper:
 
         grouper = _grouper(tmp_path)
         with pytest.raises(AiGroupingError, match="non-object JSON"):
-            grouper.group(["Kubernetes"])
+            grouper.group([KUBERNETES])
 
     def test_timeout_and_response_format_passed(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         calls: list[_RecordedCall] = []
-        _patch_completion(monkeypatch, {"DevOps": ["Kubernetes"]}, calls)
+        _patch_completion(monkeypatch, {DEVOPS: [KUBERNETES]}, calls)
 
         grouper = _grouper(tmp_path)
-        grouper.group(["Kubernetes"])
+        grouper.group([KUBERNETES])
 
         assert calls[0]["timeout"] == 30
-        assert calls[0]["model"] == "openai/gpt-4o-mini"
+        assert calls[0]["model"] == DEFAULT_AI_MODEL
         assert calls[0]["response_format"]["type"] == "json_schema"
         system_msg = calls[0]["messages"][0]["content"]
         assert "only the JSON object" in system_msg
+
+    def test_presets_bypass_llm(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Preset skills are never sent to the LLM; only the remainder is."""
+        calls: list[_RecordedCall] = []
+        _patch_completion(monkeypatch, {DEVOPS: [KUBERNETES]}, calls)
+
+        grouper = _grouper(
+            tmp_path,
+            skill_groups={
+                "Tools & Technologies": ["Docker", "Git"],
+                "Interpersonal Skills": ["Mentoring"],
+            },
+        )
+        result = grouper.group(["Docker", "Git", "Mentoring", KUBERNETES])
+
+        assert result == {
+            "Tools & Technologies": ["Docker", "Git"],
+            "Interpersonal Skills": ["Mentoring"],
+            DEVOPS: [KUBERNETES],
+        }
+        # Only the non-preset skill reached the LLM
+        assert calls[0]["messages"][1]["content"] == KUBERNETES
+
+    def test_presets_cover_all_skills_skips_llm(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When every skill is preset, no LLM call happens."""
+        calls: list[_RecordedCall] = []
+        _patch_completion(monkeypatch, {}, calls)
+
+        grouper = _grouper(
+            tmp_path,
+            skill_groups={
+                "Tools & Technologies": ["Docker"],
+                "Industry Knowledge": ["Agile Methodologies"],
+            },
+        )
+        result = grouper.group(["Docker", "Agile Methodologies"])
+
+        assert result == {
+            "Tools & Technologies": ["Docker"],
+            "Industry Knowledge": ["Agile Methodologies"],
+        }
+        assert calls == []
+
+    def test_preset_win_over_tiobe(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A preset for a programming language overrides TIOBE detection."""
+        calls: list[_RecordedCall] = []
+        _patch_completion(monkeypatch, {DEVOPS: [KUBERNETES]}, calls)
+
+        grouper = _grouper(
+            tmp_path,
+            skill_groups={PROGRAMMING_LANGUAGES: ["Rust"]},
+        )
+        result = grouper.group(["Rust", "Python", KUBERNETES])
+
+        # "Rust" is preset, "Python" detected via TIOBE — both land in one
+        # merged Programming Languages category (preset first).
+        assert result[PROGRAMMING_LANGUAGES] == ["Rust", "Python"]
+        assert calls[0]["messages"][1]["content"] == KUBERNETES
 
     def test_custom_cache_strategy_accepted(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -348,12 +423,12 @@ class TestSkillGrouper:
                 self.store[self._key(skills, tiobe)] = value
 
         calls: list[_RecordedCall] = []
-        _patch_completion(monkeypatch, {"DevOps": ["Kubernetes"]}, calls)
+        _patch_completion(monkeypatch, {DEVOPS: [KUBERNETES]}, calls)
 
         cache = InMemoryCache()
         grouper = SkillGrouper(AiConfig(), cache=cache)
-        grouper.group(["Kubernetes"])
-        grouper.group(["Kubernetes"])  # served from in-memory cache
+        grouper.group([KUBERNETES])
+        grouper.group([KUBERNETES])  # served from in-memory cache
 
         assert len(calls) == 1
-        assert cache.store == {"Kubernetes": {"DevOps": ["Kubernetes"]}}
+        assert cache.store == {KUBERNETES: {DEVOPS: [KUBERNETES]}}

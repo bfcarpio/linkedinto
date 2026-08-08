@@ -52,3 +52,13 @@ websites = "https://github.com/johndoe,https://johndoe.dev"
 [ai]
 model = "openai/gpt-4o-mini"
 # api_key = "sk-..."  # prefer LINKEDINTO_AI_API_KEY env var instead
+
+# Deterministic skill→category presets, applied before any LLM call.
+# Skills listed here are never sent to the LLM, so presets both reduce
+# token usage and pin consistent groupings (e.g. LinkedIn's own categories).
+# Keys are category names; values are exact skill names from Skills.csv.
+# [ai.skill_groups]
+# "Programming Languages" = ["Python", "Go"]
+# "Tools & Technologies" = ["Docker", "Kubernetes"]
+# "Interpersonal Skills" = ["Team Leadership"]
+# "Industry Knowledge" = ["Agile Methodologies"]

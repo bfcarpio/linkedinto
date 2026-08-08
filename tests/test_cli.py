@@ -12,7 +12,7 @@ import pytest
 from typer.testing import CliRunner
 
 from linkedinto.cli import app
-from linkedinto.config import AiConfig
+from linkedinto.config import DEFAULT_AI_MODEL, AiConfig
 from linkedinto.constants import RENDERC_YAML_FILE, RESUME_JSON_FILE
 
 runner = CliRunner()
@@ -108,7 +108,9 @@ class _FakeGrouper:
         return {"DevOps": ["Docker", "Kubernetes"]}
 
 
-AI_CONFIG_TOML = '[ai]\nmodel = "openai/gpt-4o-mini"\n'
+AI_CONFIG_TOML = f'[ai]\nmodel = "{DEFAULT_AI_MODEL}"\n'
+
+MODEL_OVERRIDE = "anthropic/claude-3-haiku-20240307"
 
 
 class TestCliAiFlags:
@@ -205,12 +207,12 @@ class TestCliAiFlags:
                 str(tmp_path / "out"),
                 "--ai-group",
                 "--ai-model",
-                "anthropic/claude-3-haiku-20240307",
+                MODEL_OVERRIDE,
             ],
         )
         assert result.exit_code == 0, result.output
         config = _FakeGrouper.instances[0].config
-        assert config.model == "anthropic/claude-3-haiku-20240307"
+        assert config.model == MODEL_OVERRIDE
 
     def test_ai_group_without_ai_config_errors(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

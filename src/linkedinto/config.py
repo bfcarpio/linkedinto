@@ -17,6 +17,9 @@ from linkedinto.logger import setup_logger
 # Setup module logger
 logger = setup_logger(__name__)
 
+DEFAULT_AI_MODEL = "openai/gpt-4o-mini"
+AI_API_KEY_ENV_VAR = "LINKEDINTO_AI_API_KEY"
+
 
 class AiConfig(BaseModel):
     """AI provider configuration for skill grouping."""
@@ -24,7 +27,7 @@ class AiConfig(BaseModel):
     model_config = ConfigDict(extra="ignore", frozen=False)
 
     model: str = Field(
-        default="openai/gpt-4o-mini",
+        default=DEFAULT_AI_MODEL,
         description="LiteLLM model string: 'provider/model' (e.g. "
         "'anthropic/claude-3-haiku-20240307', 'ollama/llama3').",
     )
@@ -32,6 +35,13 @@ class AiConfig(BaseModel):
         default=None,
         description="API key. Falls back to LINKEDINTO_AI_API_KEY env var, "
         "then provider env vars (OPENAI_API_KEY, etc.).",
+    )
+    skill_groups: dict[str, list[str]] | None = Field(
+        default=None,
+        description="Deterministic skill→category presets, applied before the "
+        "LLM call. Skills listed here are never sent to the LLM. Keys are "
+        'category names (e.g. "Tools & Technologies", "Interpersonal Skills"), '
+        "values are exact skill names.",
     )
 
 

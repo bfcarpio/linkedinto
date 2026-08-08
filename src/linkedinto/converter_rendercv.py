@@ -26,6 +26,7 @@ from linkedinto.domain import (
     SkillRow,
 )
 from linkedinto.language_detector import is_programming_language
+from linkedinto.skill_grouper import PROGRAMMING_LANGUAGES
 from linkedinto.url_extractor import extract_websites
 
 SECTION_SUMMARY = "summary"
@@ -154,7 +155,7 @@ class RenderCvConverter(Converter):
 
         if prog_skills:
             sections[SECTION_TECHNOLOGIES] = [
-                {"label": "Programming Languages", "details": ", ".join(prog_skills)}
+                {"label": PROGRAMMING_LANGUAGES, "details": ", ".join(prog_skills)}
             ]
 
         if non_prog_skills:
