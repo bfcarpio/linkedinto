@@ -103,3 +103,33 @@ class TestRenderCvConverter:
         converter = RenderCvConverter()
         result = converter.convert(no_websites_fixture())
         assert result.website is None
+
+    def test_summary_bullets(self) -> None:
+        """Summary with bullets is split into separate text entries."""
+        from linkedinto.domain import LinkedInData, ProfileRow
+        from linkedinto.email_utils import Email
+
+        data = LinkedInData(
+            profile=ProfileRow(
+                first_name="Test",
+                last_name="User",
+                email_address=Email.from_raw("test@example.com"),
+                summary=(
+                    "Senior engineer.\n\n"
+                    "Specializing in:\n"
+                    "\u2022 Backend systems\n"
+                    "\u2022 Cloud architecture\n\n"
+                    "Key achievements:\n"
+                    "\u2022 Built platform serving 10M users"
+                ),
+            ),
+        )
+        converter = RenderCvConverter()
+        result = converter.convert(data)
+        summary = result.sections.get("summary", [])
+        assert len(summary) >= 5  # text + 2 bullets + text + 1 bullet
+        assert "Senior engineer." in summary
+        assert "\u2022 Backend systems" in summary
+        assert "\u2022 Cloud architecture" in summary
+        assert "Key achievements:" in summary
+        assert "\u2022 Built platform serving 10M users" in summary

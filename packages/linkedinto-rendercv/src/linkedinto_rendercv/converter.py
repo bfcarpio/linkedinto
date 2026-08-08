@@ -88,7 +88,16 @@ class RenderCvConverter(Converter):
 
         # --- Summary section ---
         if p.summary:
-            cv_data["sections"][SECTION_SUMMARY] = [p.summary]
+            normalized = p.summary.replace("\r\n", "\n").replace("\r", "\n")
+            entries: list[str] = []
+            for block in normalized.split("\n\n"):
+                text, highlights = parse_bullets(block)
+                if text:
+                    entries.append(text)
+                for h in highlights:
+                    entries.append(f"\u2022 {h}")
+            if entries:
+                cv_data["sections"][SECTION_SUMMARY] = entries
 
         # --- Experience section ---
         if data.positions:

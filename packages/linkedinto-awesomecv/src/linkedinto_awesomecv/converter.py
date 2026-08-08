@@ -186,16 +186,17 @@ class AwesomeCvConverter(Converter):
         skills = self._build_skills(data.skills)
         if p and p.summary:
             normalized = p.summary.replace("\r\n", "\n").replace("\r", "\n")
-            summary_text, summary_highlights = parse_bullets(normalized)
-            # Preserve paragraph breaks (newline pairs); convert single
-            # newlines to forced line breaks, since LaTeX treats bare \n as space.
-            summary_text = latex_escape(summary_text)
-            paragraphs = summary_text.split("\n\n")
-            paragraphs = [para.replace("\n", r"\\") for para in paragraphs]
-            summary_text = "\n\n".join(paragraphs)
-            summary_highlights = [latex_escape(h) for h in summary_highlights]
+            summary_blocks: list[dict] = []
+            for block in normalized.split("\n\n"):
+                # The summary (text before first bullet) within each block.
+                text, highlights = parse_bullets(block)
+                # Preserve single newlines as LaTeX forced line breaks.
+                text = latex_escape(text).replace("\n", r"\\")
+                highlights = [latex_escape(h) for h in highlights]
+                if text or highlights:
+                    summary_blocks.append({"text": text, "highlights": highlights})
         else:
-            summary_text, summary_highlights = "", []
+            summary_blocks = []
 
         return {
             "name_preamble": name_preamble,
@@ -207,8 +208,7 @@ class AwesomeCvConverter(Converter):
             "linkedin_line": linkedin_line,
             "twitter_line": twitter_line,
             "full_name": latex_escape(full_name),
-            "summary_text": summary_text,
-            "summary_highlights": summary_highlights,
+            "summary_blocks": summary_blocks,
             "positions": positions,
             "education": education,
             "projects": projects,

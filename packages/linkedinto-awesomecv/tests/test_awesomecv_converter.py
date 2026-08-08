@@ -169,3 +169,38 @@ class TestAwesomeCvConverter:
         assert "\\begin{cvitems}" in result
         assert "\\item {Backend systems}" in result
         assert "\\item {Cloud architecture}" in result
+
+    def test_summary_multi_paragraph_bullets(self) -> None:
+        """Multiple bullet groups separated by paragraph breaks render as
+        independent cvparagraph/cvitems blocks, not merged."""
+        from linkedinto.domain import LinkedInData, ProfileRow
+        from linkedinto.email_utils import Email
+
+        data = LinkedInData(
+            profile=ProfileRow(
+                first_name="Test",
+                last_name="User",
+                email_address=Email.from_raw("test@example.com"),
+                summary=(
+                    "Senior engineer.\n\n"
+                    "Specializing in:\n"
+                    "\u2022 Backend systems\n"
+                    "\u2022 Cloud architecture\n\n"
+                    "Key achievements:\n"
+                    "\u2022 Built platform serving 10M users\n"
+                    "\u2022 Reduced costs by 40%"
+                ),
+            ),
+        )
+        converter = AwesomeCvConverter()
+        result = converter.convert(data)
+        assert "\\cvsection{Summary}" in result
+        assert "Senior engineer." in result
+        assert "Specializing in:" in result
+        assert "Key achievements:" in result
+        assert "\\item {Backend systems}" in result
+        assert "\\item {Cloud architecture}" in result
+        assert "\\item {Built platform serving 10M users}" in result
+        assert "\\item {Reduced costs by 40\\%}" in result
+        # "Key achievements:" should NOT be merged into a highlight item
+        assert "\\item {Cloud architecture\\n\\nKey achievements:}" not in result
