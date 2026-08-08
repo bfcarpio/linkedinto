@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from typing import cast, override
+from typing import Any, cast, override
 
 from rendercv.schema.models.cv.cv import Cv
 from rendercv.schema.models.cv.entries.experience import ExperienceEntry
+from rendercv.schema.models.cv.entries.one_line import OneLineEntry
 
 from linkedinto.converter_rendercv import RenderCvConverter
 from linkedinto.skill_grouper import PROGRAMMING_LANGUAGES, Grouper
@@ -54,7 +55,6 @@ class TestRenderCvConverter:
 
         tech_section = result.sections.get("technologies")
         assert tech_section is not None
-        from typing import Any
 
         tech_entry: Any = tech_section[0]
         tech_detail: str = str(tech_entry.details)
@@ -68,7 +68,7 @@ class TestRenderCvConverter:
         assert "Project Management" in skill_detail
 
     def test_skills_grouped(self) -> None:
-        """With a skill grouper set, one NormalEntry per category, no technologies."""
+        """With a skill grouper set, split programming languages into technologies."""
 
         class StubGrouper(Grouper):
             @override
@@ -85,16 +85,18 @@ class TestRenderCvConverter:
         result = converter.convert(full_profile_fixture())
 
         assert result.sections is not None
-        assert "technologies" not in result.sections
+        assert "technologies" in result.sections
+        tech_section = result.sections.get("technologies")
+        assert tech_section is not None
+        tech_entry = cast(OneLineEntry, tech_section[0])
+        assert tech_entry.label == PROGRAMMING_LANGUAGES
+        assert tech_entry.details == "Python, TypeScript"
+
         skill_section = result.sections.get("skills")
         assert skill_section is not None
         entries = cast(list[NormalEntry], skill_section)
-        assert [e.name for e in entries] == [
-            PROGRAMMING_LANGUAGES,
-            "Leadership",
-        ]
-        assert entries[0].highlights == ["Python", "TypeScript"]
-        assert entries[1].highlights == ["Project Management"]
+        assert [e.name for e in entries] == ["Leadership"]
+        assert entries[0].highlights == ["Project Management"]
 
     def test_website_population(self) -> None:
         """Bracket-format websites populates first URL as cv.website."""

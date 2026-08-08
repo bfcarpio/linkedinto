@@ -22,7 +22,6 @@ FULL_PROFILE: ProfileRow = ProfileRow(
     headline="Senior Software Engineer",
     occupation="Software Engineer",
     geo_location="San Francisco, CA",
-    email_address="john@example.com",
     phone_number=Phone.from_raw("+1 650-555-1234"),
     summary="Full-stack engineer with 10 years experience",
     linkedin="johnsmith",

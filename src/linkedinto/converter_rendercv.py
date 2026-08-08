@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any, override
 
+from pydantic import ValidationError
 from rendercv.schema.models.cv.cv import Cv
 from rendercv.schema.models.cv.entries.education import EducationEntry
 from rendercv.schema.models.cv.entries.experience import ExperienceEntry
@@ -25,9 +27,14 @@ from linkedinto.domain import (
     PublicationRow,
     SkillRow,
 )
-from linkedinto.language_detector import is_programming_language
+from linkedinto.exceptions import ConversionError
+from linkedinto.language_detector import (
+    is_programming_language,
+    normalize_language_name,
+)
 from linkedinto.skill_grouper import PROGRAMMING_LANGUAGES
 from linkedinto.url_extractor import extract_websites
+from linkedinto.validation import format_validation_error
 
 SECTION_SUMMARY = "summary"
 SECTION_EXPERIENCE = "experience"
@@ -45,6 +52,8 @@ PROFICIENCY_ORDER: dict[str, int] = {
     "intermediate": 2,
     "beginner": 3,
 }
+
+_logger = logging.getLogger(__name__)
 
 
 class RenderCvConverter(Converter):
@@ -127,18 +136,48 @@ class RenderCvConverter(Converter):
         # --- Skills section ---
         cv_data["sections"].update(self._build_skills(data.skills))
 
-        return Cv(**cv_data)
+        try:
+            return Cv(**cv_data)
+        except ValidationError as e:
+            for err in format_validation_error(e, Cv):
+                _logger.error("RenderCV schema validation failed: %s", err)
+            raise ConversionError("RenderCV output failed schema validation") from e
 
     def _build_skills(self, skills: list[SkillRow]) -> dict[str, list[Any]]:
         """Split skills into programming languages (technologies) and non-programming skills."""
         if self.skill_grouper is not None:
             skill_names = [s.name for s in skills if s.name]
             groups = self.skill_grouper.group(skill_names)
-            entries = [
-                NormalEntry(name=category, highlights=skills_list)
+
+            prog_langs = [
+                (category, skills_list)
                 for category, skills_list in groups.items()
+                if category == PROGRAMMING_LANGUAGES
             ]
-            return {SECTION_SKILLS: entries} if entries else {}
+            other_groups = {
+                category: skills_list
+                for category, skills_list in groups.items()
+                if category != PROGRAMMING_LANGUAGES
+            }
+
+            sections: dict[str, list[Any]] = {}
+
+            if prog_langs:
+                sections[SECTION_TECHNOLOGIES] = [
+                    {
+                        "label": PROGRAMMING_LANGUAGES,
+                        "details": ", ".join(prog_langs[0][1]),
+                    }
+                ]
+
+            if other_groups:
+                entries = [
+                    NormalEntry(name=category, highlights=skills_list)
+                    for category, skills_list in other_groups.items()
+                ]
+                sections[SECTION_SKILLS] = entries
+
+            return sections if sections else {}
 
         prog_skills: list[str] = []
         non_prog_skills: list[tuple[str, str]] = []  # (name, proficiency)
@@ -147,7 +186,7 @@ class RenderCvConverter(Converter):
             if s.name and is_programming_language(
                 s.name, tiobe_override=self.tiobe_override
             ):
-                prog_skills.append(s.name)
+                prog_skills.append(normalize_language_name(s.name))
             elif s.name:
                 non_prog_skills.append((s.name, s.proficiency or ""))
 
