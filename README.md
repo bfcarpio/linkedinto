@@ -165,7 +165,7 @@ cd /path/to/output-dir
 mise run render-pdf
 ```
 
-The task auto-installs required LaTeX packages via `tlmgr` and downloads `awesome-cv.cls` if missing. Awesome-CV requires `xelatex` (not `pdflatex`).
+The task clones the Awesome-CV repo into a temp dir (for `awesome-cv.cls` and supporting files), copies your `.tex` output there, compiles with `xelatex`, and moves the resulting `awesome-cv.pdf` back to your output directory. Awesome-CV requires `xelatex` (not `pdflatex`).
 
 ## License
 
