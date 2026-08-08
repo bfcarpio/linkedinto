@@ -395,6 +395,37 @@ class TestSkillGrouper:
         assert result[PROGRAMMING_LANGUAGES] == ["Rust", "Python"]
         assert calls[0]["messages"][1]["content"] == KUBERNETES
 
+    def test_known_categories_included_in_prompt(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Preset + TIOBE categories are surfaced to the LLM as reusable."""
+        calls: list[_RecordedCall] = []
+        _patch_completion(monkeypatch, {DEVOPS: [KUBERNETES]}, calls)
+
+        grouper = _grouper(
+            tmp_path,
+            skill_groups={"Tools & Technologies": ["Docker"]},
+        )
+        grouper.group(["Docker", "Python", KUBERNETES])
+
+        system_msg = calls[0]["messages"][0]["content"]
+        assert "Tools & Technologies" in system_msg
+        assert PROGRAMMING_LANGUAGES in system_msg
+        assert "Prefer reusing these existing categories" in system_msg
+
+    def test_no_known_categories_omits_hint(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Without presets or languages, no category hint is added."""
+        calls: list[_RecordedCall] = []
+        _patch_completion(monkeypatch, {DEVOPS: [KUBERNETES]}, calls)
+
+        grouper = _grouper(tmp_path)
+        grouper.group([KUBERNETES])
+
+        system_msg = calls[0]["messages"][0]["content"]
+        assert "Prefer reusing these existing categories" not in system_msg
+
     def test_custom_cache_strategy_accepted(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

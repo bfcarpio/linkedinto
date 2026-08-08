@@ -225,11 +225,15 @@ class SkillGrouper(Grouper):
                 merged = self._merge(prog_langs, cached)
                 return {**preset_groups, **merged}
 
-        # 4. LLM call
+        # 4. LLM call — pass the already-defined categories so the LLM can
+        #    extend them rather than inventing near-duplicates
         _logger.info(
             "AI skill grouping: calling %s for %d skills...", self._model, len(non_prog)
         )
-        result = self._call_llm(non_prog)
+        known_categories = list(preset_groups)
+        if prog_langs:
+            known_categories.append(PROGRAMMING_LANGUAGES)
+        result = self._call_llm(non_prog, known_categories)
         validated = self._validate(non_prog, result)
         if self._cache is not None:
             self._cache.set(non_prog, self._tiobe_override, validated)
@@ -241,7 +245,9 @@ class SkillGrouper(Grouper):
         merged = self._merge(prog_langs, validated)
         return {**preset_groups, **merged}
 
-    def _call_llm(self, skills: list[str]) -> dict[str, list[str]]:
+    def _call_llm(
+        self, skills: list[str], known_categories: list[str]
+    ) -> dict[str, list[str]]:
         try:
             import litellm
         except ImportError:
@@ -249,19 +255,28 @@ class SkillGrouper(Grouper):
                 "litellm is not installed. Run: pip install linkedinto[ai]"
             ) from None
 
+        system_prompt = (
+            "Group resume skills into logical professional categories. "
+            "Return a JSON object mapping category names to arrays of "
+            "skill names. Aim for 4-8 categories. Every input skill "
+            "must appear in exactly one category. Do not add, remove, "
+            "or rename skills. Respond with only the JSON object: "
+            "no markdown fences, no commentary, no explanation."
+        )
+        if known_categories:
+            system_prompt += (
+                " Prefer reusing these existing categories when a skill fits, "
+                "but create new categories when none apply: "
+                + ", ".join(known_categories)
+                + "."
+            )
+
         kwargs: _CompletionKwargs = {
             "model": self._model,
             "messages": [
                 {
                     "role": "system",
-                    "content": (
-                        "Group resume skills into logical professional categories. "
-                        "Return a JSON object mapping category names to arrays of "
-                        "skill names. Aim for 4-8 categories. Every input skill "
-                        "must appear in exactly one category. Do not add, remove, "
-                        "or rename skills. Respond with only the JSON object: "
-                        "no markdown fences, no commentary, no explanation."
-                    ),
+                    "content": system_prompt,
                 },
                 {"role": "user", "content": ", ".join(skills)},
             ],
