@@ -161,11 +161,10 @@ The Awesome-CV converter produces `.tex` files. To compile to PDF, use the `rend
 
 ```bash
 mise install  # installs tinytex (provides xelatex)
-cd /path/to/output-dir
-mise run render-pdf
+mise run render-pdf /path/to/output-dir
 ```
 
-The task clones the Awesome-CV repo into a temp dir (for `awesome-cv.cls` and supporting files), copies your `.tex` output there, compiles with `xelatex`, and moves the resulting `awesome-cv.pdf` back to your output directory. Awesome-CV requires `xelatex` (not `pdflatex`).
+The task clones the Awesome-CV repo into a temp dir (for `awesome-cv.cls` and supporting files), copies Source Sans 3 and Roboto fonts to `~/.fonts` so `xelatex` can find them, compiles with `xelatex`, and moves the resulting `awesome-cv.pdf` into your output directory. Awesome-CV requires `xelatex` (not `pdflatex`).
 
 ## License
 
