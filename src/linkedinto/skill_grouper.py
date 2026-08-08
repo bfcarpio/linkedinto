@@ -61,6 +61,7 @@ class _ResponseFormat(TypedDict):
 class _CompletionKwargs(TypedDict, total=False):
     """Kwargs passed to litellm.completion; api_key only when configured."""
 
+    model: Required[str]
     num_retries: int
     messages: Required[list[_Message]]
     response_format: Required[_ResponseFormat]

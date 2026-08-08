@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import pytest
 from dataclasses import FrozenInstanceError
+
+import pytest
 
 from linkedinto.email_utils import Email
 
@@ -36,5 +37,6 @@ class TestEmail:
 
     def test_frozen(self):
         email = Email.from_raw("john@example.com")
+        assert email is not None
         with pytest.raises(FrozenInstanceError):
-            email._address = "changed@example.com"  # type: ignore[misc]
+            setattr(email, "_address", "changed@example.com")  # noqa: B010
