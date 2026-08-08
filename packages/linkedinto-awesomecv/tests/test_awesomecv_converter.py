@@ -130,3 +130,42 @@ class TestAwesomeCvConverter:
         errors = converter.validate("")
         assert len(errors) > 0
         assert any("empty" in e.lower() for e in errors)
+
+    def test_summary_newlines(self) -> None:
+        """Single newlines in summary become LaTeX line breaks, not spaces."""
+        from linkedinto.domain import LinkedInData, ProfileRow
+        from linkedinto.email_utils import Email
+
+        data = LinkedInData(
+            profile=ProfileRow(
+                first_name="Test",
+                last_name="User",
+                email_address=Email.from_raw("test@example.com"),
+                summary="Line one\nLine two\nLine three",
+            ),
+        )
+        converter = AwesomeCvConverter()
+        result = converter.convert(data)
+        assert "\\cvsection{Summary}" in result
+        assert "Line one\\\\Line two\\\\Line three" in result
+
+    def test_summary_bullets(self) -> None:
+        """Bullet characters in summary are parsed into cvitems."""
+        from linkedinto.domain import LinkedInData, ProfileRow
+        from linkedinto.email_utils import Email
+
+        data = LinkedInData(
+            profile=ProfileRow(
+                first_name="Test",
+                last_name="User",
+                email_address=Email.from_raw("test@example.com"),
+                summary="Engineer with experience\n• Backend systems\n• Cloud architecture",
+            ),
+        )
+        converter = AwesomeCvConverter()
+        result = converter.convert(data)
+        assert "\\cvsection{Summary}" in result
+        assert "Engineer with experience" in result
+        assert "\\begin{cvitems}" in result
+        assert "\\item {Backend systems}" in result
+        assert "\\item {Cloud architecture}" in result

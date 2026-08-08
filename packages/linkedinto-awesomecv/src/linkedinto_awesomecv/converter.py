@@ -184,7 +184,18 @@ class AwesomeCvConverter(Converter):
         interests = [self._build_interest(i) for i in data.interests]
         languages = self._build_languages(data.languages)
         skills = self._build_skills(data.skills)
-        summary = latex_escape(p.summary) if p and p.summary else ""
+        if p and p.summary:
+            normalized = p.summary.replace("\r\n", "\n").replace("\r", "\n")
+            summary_text, summary_highlights = parse_bullets(normalized)
+            # Preserve paragraph breaks (newline pairs); convert single
+            # newlines to forced line breaks, since LaTeX treats bare \n as space.
+            summary_text = latex_escape(summary_text)
+            paragraphs = summary_text.split("\n\n")
+            paragraphs = [para.replace("\n", r"\\") for para in paragraphs]
+            summary_text = "\n\n".join(paragraphs)
+            summary_highlights = [latex_escape(h) for h in summary_highlights]
+        else:
+            summary_text, summary_highlights = "", []
 
         return {
             "name_preamble": name_preamble,
@@ -196,7 +207,8 @@ class AwesomeCvConverter(Converter):
             "linkedin_line": linkedin_line,
             "twitter_line": twitter_line,
             "full_name": latex_escape(full_name),
-            "summary": summary,
+            "summary_text": summary_text,
+            "summary_highlights": summary_highlights,
             "positions": positions,
             "education": education,
             "projects": projects,

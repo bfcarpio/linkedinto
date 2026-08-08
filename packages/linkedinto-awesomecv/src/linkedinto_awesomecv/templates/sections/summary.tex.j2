@@ -1,6 +1,15 @@
-<% if summary %>
+<% if summary_text or summary_highlights %>
 \cvsection{Summary}
+<% if summary_text %>
 \begin{cvparagraph}
-<< summary >>
+<< summary_text >>
 \end{cvparagraph}
+<% endif %>
+<% if summary_highlights %>
+\begin{cvitems}
+<% for item in summary_highlights %>
+  \item {<< item >>}
+<% endfor %>
+\end{cvitems}
+<% endif %>
 <% endif %>
