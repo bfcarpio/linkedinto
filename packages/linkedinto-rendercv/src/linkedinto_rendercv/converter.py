@@ -143,35 +143,13 @@ class RenderCvConverter(Converter):
             skill_names = [s.name for s in skills if s.name]
             groups = self.skill_grouper.group(skill_names)
 
-            prog_langs = [
-                (category, skills_list)
-                for category, skills_list in groups.items()
-                if category == PROGRAMMING_LANGUAGES
-            ]
-            other_groups = {
-                category: skills_list
-                for category, skills_list in groups.items()
-                if category != PROGRAMMING_LANGUAGES
+            sections: dict[str, list[Any]] = {
+                SECTION_SKILLS: [
+                    OneLineEntry(label=category, details=", ".join(skills_list))
+                    for category, skills_list in groups.items()
+                ]
             }
-
-            sections: dict[str, list[Any]] = {}
-
-            if prog_langs:
-                sections[SECTION_TECHNOLOGIES] = [
-                    {
-                        "label": PROGRAMMING_LANGUAGES,
-                        "details": ", ".join(prog_langs[0][1]),
-                    }
-                ]
-
-            if other_groups:
-                entries = [
-                    NormalEntry(name=category, highlights=skills_list)
-                    for category, skills_list in other_groups.items()
-                ]
-                sections[SECTION_SKILLS] = entries
-
-            return sections if sections else {}
+            return sections
 
         prog_skills: list[str] = []
         non_prog_skills: list[tuple[str, str]] = []  # (name, proficiency)
@@ -184,13 +162,13 @@ class RenderCvConverter(Converter):
             elif s.name:
                 non_prog_skills.append((s.name, s.proficiency or ""))
 
-        sections: dict[str, list[Any]] = {}
-
+        entries: list[OneLineEntry] = []
         if prog_skills:
-            sections[SECTION_TECHNOLOGIES] = [
-                {"label": PROGRAMMING_LANGUAGES, "details": ", ".join(prog_skills)}
-            ]
-
+            entries.append(
+                OneLineEntry(
+                    label=PROGRAMMING_LANGUAGES, details=", ".join(prog_skills)
+                )
+            )
         if non_prog_skills:
             non_prog_skills.sort(
                 key=lambda x: PROFICIENCY_ORDER.get(
@@ -201,9 +179,9 @@ class RenderCvConverter(Converter):
                 f"{name} ({level})" if level else name
                 for name, level in non_prog_skills
             )
-            sections[SECTION_SKILLS] = [{"label": "Skills", "details": details}]
+            entries.append(OneLineEntry(label="Skills", details=details))
 
-        return sections
+        return {SECTION_SKILLS: entries} if entries else {}
 
     @staticmethod
     def _convert_position(row: PositionRow) -> ExperienceEntry:
