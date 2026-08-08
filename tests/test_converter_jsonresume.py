@@ -12,6 +12,7 @@ from linkedinto.domain import (
     ProfileRow,
     SkillRow,
 )
+from linkedinto.email_utils import Email
 from linkedinto.models_jsonresume import JsonResume
 from linkedinto.skill_grouper import Grouper
 
@@ -22,7 +23,7 @@ def _minimal_data() -> LinkedInData:
             first_name="John",
             last_name="Smith",
             headline="Engineer",
-            email_address="john@example.com",
+            email_address=Email.from_raw("john@example.com"),
         ),
         positions=[
             PositionRow(

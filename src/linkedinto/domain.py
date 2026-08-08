@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from linkedinto.date_parser import parse_linkedin_date
+from linkedinto.email_utils import Email
 from linkedinto.phone_utils import Phone
 
 
@@ -20,7 +21,7 @@ class ProfileRow:
     industry: str | None = None
     country: str | None = None
     country_code: str | None = None
-    email_address: str | None = None
+    email_address: Email | None = None
     phone_number: Phone | None = None
     twitter: str | None = None
     linkedin: str | None = None

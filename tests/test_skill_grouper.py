@@ -31,6 +31,7 @@ class _RecordedCall(TypedDict, total=False):
     model: str
     messages: list[dict[str, str]]
     response_format: dict[str, object]
+    num_retries: int
     timeout: int
     api_key: str
 
@@ -475,3 +476,19 @@ class TestSkillGrouper:
 
         assert len(calls) == 1
         assert cache.store == {KUBERNETES: {DEVOPS: [KUBERNETES]}}
+
+    def test_num_retries_passed_to_litellm(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Verify num_retries=3 is passed to litellm.completion."""
+
+        calls: list[_RecordedCall] = []
+        _patch_completion(monkeypatch, {"skills": []}, calls)
+
+        grouper = _grouper(tmp_path)
+        grouper.group([KUBERNETES])
+
+        assert len(calls) == 1
+        # Verify num_retries=3 was passed via the patched function
+        assert "num_retries" in calls[0]
+        assert calls[0]["num_retries"] == 3

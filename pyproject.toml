@@ -23,6 +23,7 @@ dependencies = [
     "pyyaml>=6.0",
     "phonenumbers>=8.13",
     "rendercv",
+    "python-dateutil>=2.9.0.post0",
 ]
 
 [project.optional-dependencies]

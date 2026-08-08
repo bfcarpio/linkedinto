@@ -72,7 +72,7 @@ class RenderCvConverter(Converter):
             "name": f"{p.first_name or ''} {p.last_name or ''}".strip(),
             "headline": p.headline or p.occupation,
             "location": p.geo_location,
-            "email": p.email_address,
+            "email": p.email_address.address if p.email_address else None,
             "phone": p.phone_number.e164 if p.phone_number else None,
             "website": None,
             "social_networks": [],

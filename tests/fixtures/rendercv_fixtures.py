@@ -13,6 +13,7 @@ from linkedinto.domain import (
     PublicationRow,
     SkillRow,
 )
+from linkedinto.email_utils import Email
 from linkedinto.phone_utils import Phone
 
 # Scenario: all fields populated (maps to current FULL_RESUME)
@@ -133,7 +134,7 @@ def minimal_profile_fixture() -> LinkedInData:
             last_name="Smith",
             headline="Senior Software Engineer",
             occupation="Software Engineer",
-            email_address="john@example.com",
+            email_address=Email.from_raw("john@example.com"),
         ),
         positions=[],
         education=[],

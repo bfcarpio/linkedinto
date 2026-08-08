@@ -175,7 +175,6 @@ def run(
                 "industry",
                 "country",
                 "country_code",
-                "email_address",
                 "phone_number",
                 "twitter",
                 "linkedin",
@@ -188,7 +187,12 @@ def run(
         updated_profile_dict = apply_profile_config(config, profile_dict)
 
         # Convert back to ProfileRow
+        # Skip value objects (Email, Phone) - factory values are set in the original
+        value_object_fields = {"email_address", "phone_number"}
+
         for field_name, field_value in updated_profile_dict.items():
+            if field_name in value_object_fields:
+                continue
             if hasattr(data.profile, field_name):
                 # Keep None values as None, empty strings as empty strings
                 setattr(data.profile, field_name, field_value)

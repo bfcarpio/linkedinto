@@ -2,6 +2,8 @@
 
 Groups flat LinkedIn skill lists into logical professional categories
 using an LLM. Programming languages are pre-filtered deterministically
+            "num_retries": LLM_NUM_RETRIES,
+            "num_retries": LLM_NUM_RETRIES,
 (TIOBE + Pygments) so the LLM only categorizes the remaining skills.
 Results are cached on disk to avoid repeat API calls.
 """
@@ -30,6 +32,8 @@ PROGRAMMING_LANGUAGES = "Programming Languages"
 OTHER_CATEGORY = "Other"
 LLM_TIMEOUT_SECONDS = 30
 
+LLM_NUM_RETRIES = 3
+
 CACHE_DIR_NAME = ".cache/linkedinto"
 CACHE_FILENAME = "skill-groups.json"
 
@@ -57,7 +61,7 @@ class _ResponseFormat(TypedDict):
 class _CompletionKwargs(TypedDict, total=False):
     """Kwargs passed to litellm.completion; api_key only when configured."""
 
-    model: Required[str]
+    num_retries: int
     messages: Required[list[_Message]]
     response_format: Required[_ResponseFormat]
     timeout: Required[int]
@@ -297,6 +301,7 @@ class SkillGrouper(Grouper):
                 },
             },
             "timeout": LLM_TIMEOUT_SECONDS,
+            "num_retries": LLM_NUM_RETRIES,
         }
         if self._api_key:
             kwargs["api_key"] = self._api_key

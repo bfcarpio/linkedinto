@@ -28,7 +28,8 @@ class TestLinkedinZipParser:
         data = parser.parse(sample_csv_zip)
         assert data.profile is not None
         assert data.profile.occupation == "Software Eng."
-        assert data.profile.email_address == "john@example.com"
+        assert data.profile.email_address is not None
+        assert data.profile.email_address.address == "john@example.com"
         assert data.profile.linkedin == "https://linkedin.com/in/john"
         assert data.profile.headline == "Senior Engineer"
 

@@ -12,6 +12,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from linkedinto.email_utils import Email
 from linkedinto.logger import setup_logger
 from linkedinto.phone_utils import Phone
 from linkedinto.validation import format_validation_error
@@ -259,8 +260,8 @@ def get_tiobe_override(config: LinkedIntoConfig | None) -> frozenset[str] | None
 
 
 def apply_profile_config(
-    config: LinkedIntoConfig | None, profile_row: dict[str, str | Phone | None]
-) -> dict[str, str | Phone | None]:
+    config: LinkedIntoConfig | None, profile_row: dict[str, str | Phone | Email | None]
+) -> dict[str, str | Phone | Email | None]:
     """Apply configuration overrides to profile data.
 
     Configuration values take highest precedence over extracted LinkedIn data.
@@ -289,6 +290,11 @@ def apply_profile_config(
         # Phone numbers come in as raw strings from TOML; normalize to
         # Phone so downstream converters receive the value object, not a
         # raw string from the LinkedIn CSV path.
+        # Email addresses come in as raw strings from TOML; normalize to
+        # Email so downstream converters receive the value object, not a
+        # raw string from the LinkedIn CSV path.
+        elif field_name == "email_address" and isinstance(field_value, str):
+            updated_profile[field_name] = Email.from_raw(field_value)
         if field_name == "phone_number" and isinstance(field_value, str):
             updated_profile[field_name] = Phone.from_raw(field_value)
         else:

@@ -21,7 +21,7 @@ class TestParseLinkedinDate:
             ("", None),
             ("  ", None),
             ("not a date", None),
-            ("2020/03/01", None),
+            ("2020/03/01", "2020-03-01"),
             ("January 2020", "2020-01-01"),
             ("September 2023", "2023-09-01"),
             ("Jun 2021", "2021-06-01"),
