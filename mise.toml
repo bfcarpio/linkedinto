@@ -8,7 +8,7 @@ tinytex = "latest"
 python.uv_venv_auto = "source"
 
 [tasks.clean]
-run = "rm -rf dist/ .pytest_cache/ .ruff_cache/ .ty/ __pycache__/ **/__pycache__/ linkedinto.egg-info/ .prek_cache/ resume.json rendercv.yaml awesome-cv.tex awesome-cv.cls awesome-cv.log awesome-cv.aux awesome-cv.pdf linkedinto.toml"
+run = "rm -rf dist/ .pytest_cache/ .ruff_cache/ .ty/ __pycache__/ **/__pycache__/ linkedinto.egg-info/ .prek_cache/ resume.json rendercv.yaml awesome-cv.tex awesome-cv.cls awesome-cv.log awesome-cv.aux awesome-cv.pdf"
 description = "Remove all generated and cache files"
 
 [tasks.test]

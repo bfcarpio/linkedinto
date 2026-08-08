@@ -116,7 +116,7 @@ class JsonResumeConverter(Converter):
         """Validate JSON Resume model.
 
         Checks:
-        - Basics are present (name, email, summary).
+        - Basics are present (name, summary).
         - No empty work/education entries with missing required fields.
 
         Returns:
@@ -129,8 +129,6 @@ class JsonResumeConverter(Converter):
         else:
             if not model.basics.name:
                 errors.append("Basics 'name' is empty or missing")
-            if not model.basics.email:
-                errors.append("Basics 'email' is empty or missing")
 
         # Check work entries for required fields
         for i, w in enumerate(model.work):

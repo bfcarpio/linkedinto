@@ -111,3 +111,17 @@ class TestJsonResumeConverter:
         assert data.positions[1].company == "Mid Corp"
         assert data.positions[2].company == "Old Corp"
         assert data.positions[3].company == "Z Co"  # None sorts last
+
+    def test_validate_without_email(self) -> None:
+        """A profile without email should not produce a validation error."""
+        data = LinkedInData(
+            profile=ProfileRow(
+                first_name="Test",
+                last_name="User",
+                headline="Engineer",
+            ),
+        )
+        converter = JsonResumeConverter()
+        resume = converter.convert(data)
+        errors = converter.validate(resume)
+        assert not any("email" in e.lower() for e in errors)
