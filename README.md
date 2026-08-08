@@ -1,6 +1,6 @@
 # linkedinto
 
-Convert a LinkedIn export ZIP to [JSON Resume](https://jsonresume.org/) and [RenderCV](https://rendercv.com/) YAML.
+Convert a LinkedIn export ZIP to [JSON Resume](https://jsonresume.org/), [RenderCV](https://rendercv.com/) YAML, and [Awesome-CV](https://github.com/posquit0/Awesome-CV) LaTeX.
 
 ## Usage
 
@@ -8,23 +8,25 @@ Convert a LinkedIn export ZIP to [JSON Resume](https://jsonresume.org/) and [Ren
 linkedinto convert /path/to/LinkedInExport.zip
 ```
 
-This parses the LinkedIn export and outputs `resume.json` (JSON Resume) and `rendercv.yaml` (RenderCV YAML) in the current directory.
+This parses the LinkedIn export and outputs `resume.json` (JSON Resume), `rendercv.yaml` (RenderCV YAML), and `awesome-cv.tex` (Awesome-CV LaTeX) in the current directory.
 
 ### Options
 
 | Flag                      | Description                                                 |
 | ------------------------- | ----------------------------------------------------------- |
 | `--output-dir`, `-o`      | Output directory (default: `.`)                             |
-| `--jsonresume-only`       | Only output JSON Resume (skip RenderCV)                     |
-| `--rendercv-only`         | Only output RenderCV YAML (skip JSON Resume)                |
+| `--jsonresume-only`       | Only output JSON Resume (skip RenderCV and Awesome-CV)       |
+| `--rendercv-only`         | Only output RenderCV YAML (skip JSON Resume and Awesome-CV) |
+| `--awesomecv-only`        | Only output Awesome-CV LaTeX (skip JSON Resume and RenderCV)|
 | `--partial-jsonresume`    | Path to existing JSON Resume for merging                    |
-| `--partial-rendercv`     | Path to existing RenderCV YAML for merging                  |
+| `--partial-rendercv`      | Path to existing RenderCV YAML for merging                  |
+| `--partial-awesomecv`     | Path to existing Awesome-CV .tex (not yet supported)         |
 | `--bullets`               | Custom bullet characters, pipe-separated (e.g. `"•\|*-\|"`) |
 | `--verbose`, `-v`         | Enable debug logging                                        |
 | `--ai-group`              | Use AI to group skills into logical categories (requires `[ai]` config) |
 | `--ai-preview`            | Print AI skill groupings to stdout and exit (implies `--ai-group`) |
 | `--ai-model`              | Override the model from `[ai]` config                       |
-| `--no-cache`              | Bypass the skill-grouping disk cache                      |
+| `--no-cache`              | Bypass the skill-grouping disk cache                        |
 
 ### Partial Overwrites
 
@@ -44,22 +46,20 @@ Edit `linkedinto.toml` to customize:
 
 Fields from the partial file take precedence over the LinkedIn export data — useful for supplementing data LinkedIn doesn't export (e.g. professional summary, custom sections).
 
-## What It Converts
-
-| LinkedIn Section       | JSON Resume       | RenderCV                  |
-| ---------------------- | ----------------- | ------------------------- |
-| Profile                | `basics`          | `cv.sections`             |
-| Positions              | `work`            | `cv.experience`           |
-| Education              | `education`       | `cv.education`            |
-| Skills                 | `skills`          | `cv.skills`               |
-| Languages              | `languages`       | `cv.languages`            |
-| Projects               | `projects`        | `cv.sections`             |
-| Publications           | `publications`    | `cv.sections`             |
-| Certifications         | `certifications`  | `cv.sections`             |
-| Honors & Awards        | `awards`          | `cv.sections`             |
-| Recommendations        | —                 | —                         |
-| Interests              | `interests`       | `cv.sections`             |
-| Volunteer              | `volunteer`       | `cv.sections`             |
+| LinkedIn Section       | JSON Resume       | RenderCV                  | Awesome-CV                |
+| ---------------------- | ----------------- | ------------------------- | ------------------------- |
+| Profile                | `basics`          | `cv.sections`             | `\name`, `\position`      |
+| Positions              | `work`            | `cv.experience`           | `\cvsection{Experience}`   |
+| Education              | `education`       | `cv.education`            | `\cvsection{Education}`   |
+| Skills                 | `skills`          | `cv.skills`               | `\cvsection{Skills}`      |
+| Languages              | `languages`       | `cv.languages`            | `\cvsection{Languages}`   |
+| Projects               | `projects`        | `cv.sections`             | `\cvsection{Projects}`    |
+| Publications           | `publications`    | `cv.sections`             | `\cvsection{Publications}`|
+| Certifications         | `certifications`  | `cv.sections`             | `\cvsection{Certifications}` |
+| Honors & Awards        | `awards`          | `cv.sections`             | `\cvsection{Honors}`      |
+| Recommendations        | —                 | —                         | —                         |
+| Interests              | `interests`       | `cv.sections`             | `\cvsection{Interests}`   |
+| Volunteer              | `volunteer`       | `cv.sections`             | `\cvsection{Volunteer}`   |
 
 ## AI Skill Grouping
 
@@ -120,12 +120,6 @@ uv sync --extra ai
 ### Setup
 
 ```bash
-# With AI skill grouping support
-uv sync --extra ai
-uv run prek install
-```
-
-# With AI skill grouping support
 uv sync --extra ai
 uv run prek install
 ```
@@ -134,9 +128,9 @@ uv run prek install
 
 ```bash
 # Lint, format check, type check, tests
-uv run ruff check src/ tests/
-uv run ruff format --check src/
-uv run ty check src/ tests/
+uv run ruff check src/ tests/ packages/
+uv run ruff format --check src/ packages/
+uv run ty check src/ tests/ packages/
 uv run pytest
 ```
 
@@ -147,6 +141,31 @@ This project uses [prek](https://prek.j178.dev/) to run:
 - `ruff check` — linting
 - `ruff format` — formatting
 - `ty check` — type checking
+
+
+## Plugin Architecture
+
+Each converter is an independently-installable package, discovered at runtime via Python entry points (`linkedinto.converters` group):
+
+| Package | Entry point | Output |
+| ------- | ----------- | ------ |
+| `linkedinto-jsonresume` | `jsonresume` | `resume.json` |
+| `linkedinto-rendercv` | `rendercv` | `rendercv.yaml` |
+| `linkedinto-awesomecv` | `awesomecv` | `awesome-cv.tex` |
+
+All three are installed by default via the uv workspace. To add a new converter, create a package with a `linkedinto.converters` entry point — no core changes needed.
+
+### Rendering Awesome-CV PDFs
+
+The Awesome-CV converter produces `.tex` files. To compile to PDF, use the `render-pdf` mise task (requires [TinyTeX](https://yihui.org/tinytex/)):
+
+```bash
+mise install  # installs tinytex (provides xelatex)
+cd /path/to/output-dir
+mise run render-pdf
+```
+
+The task auto-installs required LaTeX packages via `tlmgr` and downloads `awesome-cv.cls` if missing. Awesome-CV requires `xelatex` (not `pdflatex`).
 
 ## License
 

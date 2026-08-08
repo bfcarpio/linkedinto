@@ -1,0 +1,12 @@
+[project]
+name = "linkedinto-awesomecv"
+version = "0.0.0"
+requires-python = ">=3.12"
+dependencies = ["linkedinto", "jinja2>=3.0"]
+
+[project.entry-points.'linkedinto.converters']
+awesomecv = "linkedinto_awesomecv.converter:AwesomeCvConverter"
+
+[build-system]
+requires = ["uv_build>=0.10.2,<0.11.0"]
+build-backend = "uv_build"

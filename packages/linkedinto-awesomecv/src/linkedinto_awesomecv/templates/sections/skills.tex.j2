@@ -1,0 +1,10 @@
+<% if skills %>
+\cvsection{Skills}
+\begin{cvskills}
+<% for category, skill_list in skills %>
+  \cvskill
+    {<< latex_escape(category) >>}
+    {<% for s in skill_list %><< latex_escape(s) >><% if not loop.last %>, <% endif %><% endfor %>}
+<% endfor %>
+\end{cvskills}
+<% endif %>

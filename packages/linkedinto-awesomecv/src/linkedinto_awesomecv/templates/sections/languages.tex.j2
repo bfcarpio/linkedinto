@@ -1,0 +1,10 @@
+<% if languages %>
+\cvsection{Languages}
+\begin{cvskills}
+<% for name, proficiency in languages %>
+  \cvskill
+    {<< latex_escape(name) >>}
+    {<< latex_escape(proficiency) >>}
+<% endfor %>
+\end{cvskills}
+<% endif %>

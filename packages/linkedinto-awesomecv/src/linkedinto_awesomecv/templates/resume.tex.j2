@@ -1,0 +1,30 @@
+\documentclass[11pt, a4paper]{awesome-cv}
+\geometry{left=1.4cm, top=.8cm, right=1.4cm, bottom=1.8cm, footskip=.5cm}
+\colorlet{awesome}{awesome-emerald}
+\setbool{acvSectionColorHighlight}{true}
+\renewcommand{\acvHeaderSocialSep}{\quad\textbar\quad}
+
+<< name_preamble >>
+<< position_line >>
+<< address_line >>
+<< mobile_line >>
+<< email_line >>
+<< homepage_line >>
+<< linkedin_line >>
+<< twitter_line >>
+
+\begin{document}
+\makecvheader[C]
+\makecvfooter{\today}{<< full_name >>~~~·~~~R\'esum\'e}{\thepage}
+<% include "sections/summary.tex.j2" %>
+<% include "sections/experience.tex.j2" %>
+<% include "sections/education.tex.j2" %>
+<% include "sections/projects.tex.j2" %>
+<% include "sections/skills.tex.j2" %>
+<% include "sections/languages.tex.j2" %>
+<% include "sections/honors.tex.j2" %>
+<% include "sections/certifications.tex.j2" %>
+<% include "sections/volunteer.tex.j2" %>
+<% include "sections/publications.tex.j2" %>
+<% include "sections/interests.tex.j2" %>
+\end{document}

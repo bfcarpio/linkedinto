@@ -2,6 +2,7 @@
 prek = "latest"
 python = "3.12"
 uv = "latest"
+tinytex = "latest"
 
 [settings]
 python.uv_venv_auto = "source"
@@ -33,3 +34,15 @@ description = "Check formatting with ruff"
 [tasks.typecheck]
 run = "uv run ty check src/ tests/"
 description = "Run type checker"
+
+[tasks.render-pdf]
+run = """
+# Ensure required LaTeX packages are installed (idempotent)
+tlmgr install fontawesome6 source-sans-pro-3 roboto parskip hyperref geometry xcolor fontspec unicode-math etoolbox xifthen xstring tabularx enumitem ragged2e fancyhdr ifxetex bookmark tcolorbox 2>/dev/null || true
+# Copy awesome-cv.cls if not present (download from GitHub)
+if [ ! -f awesome-cv.cls ]; then
+  curl -sSL https://raw.githubusercontent.com/posquit0/Awesome-CV/master/awesome-cv.cls -o awesome-cv.cls
+fi
+xelatex -interaction=nonstopmode awesome-cv.tex
+"""
+description = "Compile awesome-cv.tex to PDF using xelatex (requires tinytex)"

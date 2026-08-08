@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from typing import override
 
-from linkedinto.converter_jsonresume import JsonResumeConverter
+from linkedinto_jsonresume.converter import JsonResumeConverter
+from linkedinto_jsonresume.models import JsonResume
+
 from linkedinto.domain import (
     EducationRow,
     LinkedInData,
@@ -13,7 +15,6 @@ from linkedinto.domain import (
     SkillRow,
 )
 from linkedinto.email_utils import Email
-from linkedinto.models_jsonresume import JsonResume
 from linkedinto.skill_grouper import Grouper
 
 

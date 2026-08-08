@@ -2,6 +2,14 @@ version = 1
 revision = 3
 requires-python = ">=3.12"
 
+[manifest]
+members = [
+    "linkedinto",
+    "linkedinto-awesomecv",
+    "linkedinto-jsonresume",
+    "linkedinto-rendercv",
+]
+
 [[package]]
 name = "aiohappyeyeballs"
 version = "2.7.1"
@@ -726,11 +734,13 @@ name = "linkedinto"
 version = "0.0.0"
 source = { editable = "." }
 dependencies = [
+    { name = "linkedinto-awesomecv" },
+    { name = "linkedinto-jsonresume" },
+    { name = "linkedinto-rendercv" },
     { name = "phonenumbers" },
     { name = "pydantic" },
     { name = "python-dateutil" },
     { name = "pyyaml" },
-    { name = "rendercv" },
     { name = "typer" },
 ]
 
@@ -750,12 +760,14 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "linkedinto-awesomecv", editable = "packages/linkedinto-awesomecv" },
+    { name = "linkedinto-jsonresume", editable = "packages/linkedinto-jsonresume" },
+    { name = "linkedinto-rendercv", editable = "packages/linkedinto-rendercv" },
     { name = "litellm", marker = "extra == 'ai'", specifier = ">=1.0" },
     { name = "phonenumbers", specifier = ">=8.13" },
     { name = "pydantic", specifier = ">=2.0" },
     { name = "python-dateutil", specifier = ">=2.9.0.post0" },
     { name = "pyyaml", specifier = ">=6.0" },
-    { name = "rendercv" },
     { name = "typer", specifier = ">=0.12" },
 ]
 provides-extras = ["ai"]
@@ -767,6 +779,53 @@ dev = [
     { name = "ruff", specifier = ">=0.6" },
     { name = "syrupy", specifier = ">=4.0" },
     { name = "ty", specifier = ">=0.0.1" },
+]
+
+[[package]]
+name = "linkedinto-awesomecv"
+version = "0.0.0"
+source = { editable = "packages/linkedinto-awesomecv" }
+dependencies = [
+    { name = "jinja2" },
+    { name = "linkedinto" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "jinja2", specifier = ">=3.0" },
+    { name = "linkedinto", editable = "." },
+]
+
+[[package]]
+name = "linkedinto-jsonresume"
+version = "0.0.0"
+source = { editable = "packages/linkedinto-jsonresume" }
+dependencies = [
+    { name = "linkedinto" },
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "linkedinto", editable = "." },
+    { name = "pydantic", specifier = ">=2.0" },
+]
+
+[[package]]
+name = "linkedinto-rendercv"
+version = "0.0.0"
+source = { editable = "packages/linkedinto-rendercv" }
+dependencies = [
+    { name = "linkedinto" },
+    { name = "pydantic" },
+    { name = "rendercv" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "linkedinto", editable = "." },
+    { name = "pydantic", specifier = ">=2.0" },
+    { name = "rendercv" },
 ]
 
 [[package]]

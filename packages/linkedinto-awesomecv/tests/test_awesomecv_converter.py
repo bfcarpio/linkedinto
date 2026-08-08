@@ -1,0 +1,132 @@
+"""Tests for Awesome-CV converter — consumes LinkedInData directly."""
+
+from __future__ import annotations
+
+from typing import override
+
+from linkedinto_awesomecv.converter import AwesomeCvConverter
+
+from linkedinto.skill_grouper import PROGRAMMING_LANGUAGES, Grouper
+from tests.fixtures.rendercv_fixtures import (
+    full_profile_fixture,
+    minimal_profile_fixture,
+    partial_profile_fixture,
+)
+
+
+class TestAwesomeCvConverter:
+    def test_convert_empty(self) -> None:
+        """Partial (None profile) returns a valid .tex with empty name."""
+        converter = AwesomeCvConverter()
+        result = converter.convert(partial_profile_fixture())
+        assert isinstance(result, str)
+        assert "\\documentclass" in result
+        assert "\\begin{document}" in result
+        assert "\\name{}{}" in result
+
+    def test_convert_basics(self) -> None:
+        """Minimal profile produces name, email, and position lines."""
+        converter = AwesomeCvConverter()
+        result = converter.convert(minimal_profile_fixture())
+        assert "\\name{John}{Smith}" in result
+        assert "\\email{john@example.com}" in result
+        assert "\\position{" in result
+
+    def test_convert_work(self) -> None:
+        """Full profile includes Experience section with Acme Corp."""
+        converter = AwesomeCvConverter()
+        result = converter.convert(full_profile_fixture())
+        assert "\\cvsection{Experience}" in result
+        assert "Acme Corp" in result
+        assert "\\cventry" in result
+
+    def test_convert_education(self) -> None:
+        """Full profile includes Education section with MIT."""
+        converter = AwesomeCvConverter()
+        result = converter.convert(full_profile_fixture())
+        assert "\\cvsection{Education}" in result
+        assert "MIT" in result
+
+    def test_skills(self) -> None:
+        """Skills section contains cvskill entries; programming languages detected."""
+        converter = AwesomeCvConverter()
+        result = converter.convert(full_profile_fixture())
+        assert "\\cvsection{Skills}" in result
+        assert "\\cvskill" in result
+        assert "Python" in result
+
+    def test_skills_grouped(self) -> None:
+        """With a StubGrouper, skills are split into categories."""
+
+        class StubGrouper(Grouper):
+            @override
+            def group(self, skills: list[str]) -> dict[str, list[str]]:
+                return {
+                    PROGRAMMING_LANGUAGES: ["Python", "TypeScript"],
+                    "Leadership": ["Project Management"],
+                }
+
+        converter = AwesomeCvConverter()
+        converter.skill_grouper = StubGrouper()
+        result = converter.convert(full_profile_fixture())
+        assert "\\cvskill" in result
+        assert "Programming Languages" in result
+        assert "Leadership" in result
+        assert "Python" in result
+
+    def test_latex_escaping(self) -> None:
+        """Special characters in company name are escaped."""
+        from linkedinto.domain import LinkedInData, PositionRow, ProfileRow
+        from linkedinto.email_utils import Email
+
+        data = LinkedInData(
+            profile=ProfileRow(
+                first_name="Test",
+                last_name="User",
+                email_address=Email.from_raw("test@example.com"),
+            ),
+            positions=[
+                PositionRow(
+                    company="A&B Corp",
+                    position="Dev",
+                    started="2020-01",
+                ),
+            ],
+        )
+        converter = AwesomeCvConverter()
+        result = converter.convert(data)
+        assert r"A\&B Corp" in result
+
+    def test_date_formatting(self) -> None:
+        """ISO date 2023-09 renders as 'Sep. 2023'."""
+        from linkedinto.domain import EducationRow, LinkedInData, ProfileRow
+        from linkedinto.email_utils import Email
+
+        data = LinkedInData(
+            profile=ProfileRow(
+                first_name="Test",
+                last_name="User",
+                email_address=Email.from_raw("test@example.com"),
+            ),
+            education=[
+                EducationRow(
+                    school="MIT",
+                    degree="BS",
+                    started="2020-09",
+                    ended="2023-09",
+                ),
+            ],
+        )
+        converter = AwesomeCvConverter()
+        result = converter.convert(data)
+        assert "Sep. 2023" in result
+
+    def test_validate(self) -> None:
+        """Valid output passes validation, empty string fails."""
+        converter = AwesomeCvConverter()
+        valid = converter.convert(minimal_profile_fixture())
+        assert converter.validate(valid) == []
+
+        errors = converter.validate("")
+        assert len(errors) > 0
+        assert any("empty" in e.lower() for e in errors)

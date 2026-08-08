@@ -1,0 +1,26 @@
+<% if education %>
+\cvsection{Education}
+\begin{cventries}
+<% for edu in education %>
+  \cventry
+    {<< latex_escape(edu.degree) >>}
+    {<< latex_escape(edu.institution) >>}
+    {<< latex_escape(edu.location) >>}
+    {<< format_date_range(edu.started, edu.ended) >>}
+    {
+<% if edu.score %>
+      \begin{cvitems}
+        \item {GPA: << latex_escape(edu.score) >>}
+<% if edu.courses %>
+        \item {Coursework: <% for c in edu.courses %><< latex_escape(c) >><% if not loop.last %>, <% endif %><% endfor %>}
+<% endif %>
+      \end{cvitems}
+<% elif edu.courses %>
+      \begin{cvitems}
+        \item {Coursework: <% for c in edu.courses %><< latex_escape(c) >><% if not loop.last %>, <% endif %><% endfor %>}
+      \end{cvitems}
+<% endif %>
+    }
+<% endfor %>
+\end{cventries}
+<% endif %>

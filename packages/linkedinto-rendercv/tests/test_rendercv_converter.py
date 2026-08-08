@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from typing import Any, cast, override
 
+from linkedinto_rendercv.converter import RenderCvConverter
 from rendercv.schema.models.cv.cv import Cv
 from rendercv.schema.models.cv.entries.experience import ExperienceEntry
 from rendercv.schema.models.cv.entries.one_line import OneLineEntry
 
-from linkedinto.converter_rendercv import RenderCvConverter
 from linkedinto.skill_grouper import PROGRAMMING_LANGUAGES, Grouper
 from tests.fixtures.rendercv_fixtures import (
     full_profile_fixture,

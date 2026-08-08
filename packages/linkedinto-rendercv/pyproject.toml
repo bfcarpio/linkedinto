@@ -1,0 +1,12 @@
+[project]
+name = "linkedinto-rendercv"
+version = "0.0.0"
+requires-python = ">=3.12"
+dependencies = ["linkedinto", "rendercv", "pydantic>=2.0"]
+
+[project.entry-points.'linkedinto.converters']
+rendercv = "linkedinto_rendercv.converter:RenderCvConverter"
+
+[build-system]
+requires = ["uv_build>=0.10.2,<0.11.0"]
+build-backend = "uv_build"

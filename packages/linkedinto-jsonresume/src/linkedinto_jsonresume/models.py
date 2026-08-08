@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict
 
+JSONRESUME_SCHEMA_URL = "https://raw.githubusercontent.com/jsonresume/jsonresume.org/refs/heads/master/packages/schema/schema.json"
+
 
 class Location(BaseModel):
     model_config = ConfigDict(populate_by_name=True)

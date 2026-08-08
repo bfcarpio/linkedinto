@@ -1,0 +1,21 @@
+<% if projects %>
+\cvsection{Projects}
+\begin{cventries}
+<% for proj in projects %>
+  \cventry
+    {}
+    {<< latex_escape(proj.name) >>}
+    {}
+    {<< format_date_range(proj.started, proj.ended) >>}
+    {
+<% if proj.highlights %>
+      \begin{cvitems}
+<% for item in proj.highlights %>
+        \item {<< latex_escape(item) >>}
+<% endfor %>
+      \end{cvitems}
+<% endif %>
+    }
+<% endfor %>
+\end{cventries}
+<% endif %>

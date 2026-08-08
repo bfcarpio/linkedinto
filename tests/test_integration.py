@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 import yaml
+from linkedinto_jsonresume.converter import JsonResumeConverter
+from linkedinto_rendercv.converter import RenderCvConverter
 
-from linkedinto.converter_jsonresume import JsonResumeConverter
-from linkedinto.converter_rendercv import RenderCvConverter
 from linkedinto.overwriter import overwrite
 from linkedinto.parser import LinkedinZipParser
 from tests.conftest import _load_fixture

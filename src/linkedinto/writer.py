@@ -58,3 +58,10 @@ def write_yaml(
 
     p.write_text("\n".join(lines), encoding=UTF8_ENCODING)
     return p
+
+
+def write_tex(data: str, path: str | Path) -> Path:
+    """Write LaTeX text to file."""
+    p = Path(path)
+    p.write_text(data, encoding=UTF8_ENCODING)
+    return p

@@ -1,0 +1,21 @@
+<% if positions %>
+\cvsection{Experience}
+\begin{cventries}
+<% for pos in positions %>
+  \cventry
+    {<< latex_escape(pos.position) >>}
+    {<< latex_escape(pos.company) >>}
+    {<< latex_escape(pos.location) >>}
+    {<< format_date_range(pos.started, pos.ended) >>}
+    {
+<% if pos.highlights %>
+      \begin{cvitems}
+<% for item in pos.highlights %>
+        \item {<< latex_escape(item) >>}
+<% endfor %>
+      \end{cvitems}
+<% endif %>
+    }
+<% endfor %>
+\end{cventries}
+<% endif %>

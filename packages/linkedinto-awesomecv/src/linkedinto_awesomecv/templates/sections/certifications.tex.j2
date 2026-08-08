@@ -1,0 +1,12 @@
+<% if certifications %>
+\cvsection{Certifications}
+\begin{cvhonors}
+<% for c in certifications %>
+  \cvhonor
+    {<< latex_escape(c.name) >>}
+    {<< latex_escape(c.issuer) >>}
+    {}
+    {<< format_acv_date(c.date) >>}
+<% endfor %>
+\end{cvhonors}
+<% endif %>

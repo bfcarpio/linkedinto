@@ -7,14 +7,14 @@ from pathlib import Path
 
 import typer
 
-from linkedinto.constants import RESULT_JSONRESUME, RESULT_RENDERC
+from linkedinto.constants import RESULT_AWESOMECV, RESULT_JSONRESUME, RESULT_RENDERC
 from linkedinto.exceptions import LinkedIntoError
 from linkedinto.logger import setup_logger
 from linkedinto.orchestrator import run as run_pipeline
 
 app = typer.Typer(
     name="linkedinto",
-    help="Convert a LinkedIn export ZIP to JSON Resume and RenderCV YAML.",
+    help="Convert a LinkedIn export ZIP to JSON Resume, RenderCV YAML, and Awesome-CV LaTeX.",
     no_args_is_help=True,
 )
 
@@ -65,6 +65,15 @@ def convert(
         dir_okay=False,
         readable=True,
     ),
+    partial_awesomecv: Path | None = typer.Option(  # noqa: B008
+        None,
+        "--partial-awesomecv",
+        help="Path to existing Awesome-CV .tex for merging (not yet supported)",
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        readable=True,
+    ),
     jsonresume_only: bool = typer.Option(  # noqa: B008
         False,
         "--jsonresume-only",
@@ -74,6 +83,11 @@ def convert(
         False,
         "--rendercv-only",
         help="Only output RenderCV YAML (skip JSON Resume)",
+    ),
+    awesomecv_only: bool = typer.Option(  # noqa: B008
+        False,
+        "--awesomecv-only",
+        help="Only output Awesome-CV LaTeX (skip JSON Resume and RenderCV)",
     ),
     bullets: str | None = typer.Option(  # noqa: B008
         None,
@@ -106,7 +120,7 @@ def convert(
         help="Skip the interactive profile questionnaire.",
     ),
 ) -> None:
-    """Convert a LinkedIn export ZIP to JSON Resume and/or RenderCV YAML."""
+    """Convert a LinkedIn export ZIP to JSON Resume, RenderCV YAML, and/or Awesome-CV LaTeX."""
     try:
         # Determine if questionnaire should run (TTY check + flag)
         interactive = not no_interactive and sys.stdin.isatty()
@@ -117,15 +131,18 @@ def convert(
         result = run_pipeline(
             zip_path=zip_file,
             output_dir=output_dir,
-            partial_jsonresume=partial_jsonresume,
-            partial_rendercv=partial_rendercv,
-            jsonresume_only=jsonresume_only,
-            rendercv_only=rendercv_only,
-            bullets=bullets,
             ai_group=ai_group,
             ai_preview=ai_preview,
-            no_cache=no_cache,
             ai_model=ai_model,
+            no_cache=no_cache,
+            interactive=interactive,
+            partial_jsonresume=partial_jsonresume,
+            partial_rendercv=partial_rendercv,
+            partial_awesomecv=partial_awesomecv,
+            jsonresume_only=jsonresume_only,
+            rendercv_only=rendercv_only,
+            awesomecv_only=awesomecv_only,
+            bullets=bullets,
         )
 
         if ai_preview:
@@ -136,6 +153,8 @@ def convert(
             msg_parts.append(f"JSON Resume: {result[RESULT_JSONRESUME]}")
         if RESULT_RENDERC in result:
             msg_parts.append(f"RenderCV: {result[RESULT_RENDERC]}")
+        if RESULT_AWESOMECV in result:
+            msg_parts.append(f"Awesome-CV: {result[RESULT_AWESOMECV]}")
 
         logger.info("Conversion complete: %s", "; ".join(msg_parts))
         typer.echo(f"✅  {'; '.join(msg_parts)}")

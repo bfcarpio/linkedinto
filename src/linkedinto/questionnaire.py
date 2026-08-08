@@ -49,9 +49,17 @@ def _display_profile(profile: ProfileRow, table_cls: type[Table] | None = None) 
     else:
         for field_name in _PROFILE_FIELDS:
             if field_name == "email_address":
-                value = profile.email_address.address if profile.email_address else "(not set)"
+                value = (
+                    profile.email_address.address
+                    if profile.email_address
+                    else "(not set)"
+                )
             elif field_name == "phone_number":
-                value = profile.phone_number.international if profile.phone_number else "(not set)"
+                value = (
+                    profile.phone_number.international
+                    if profile.phone_number
+                    else "(not set)"
+                )
             else:
                 value = getattr(profile, field_name) or "(not set)"
             table.add_row(field_name.replace("_", " ").title(), str(value))
@@ -74,7 +82,9 @@ def _prompt_field_selection(prompt_fn: Callable[[str], str]) -> int:
         typer.echo(f"{i}. {field_display}")
     typer.echo("\nSelect a field to edit, or press Enter to finish: ", nl=False)
 
-    selection = prompt_fn("Select field number (1-16) or press Enter to finish: ", default="")
+    selection = prompt_fn(
+        "Select field number (1-16) or press Enter to finish: ", default=""
+    )
 
     if not selection.strip():
         return -1
@@ -86,11 +96,15 @@ def _prompt_field_selection(prompt_fn: Callable[[str], str]) -> int:
     except ValueError:
         pass
 
-    typer.echo("Invalid selection. Please enter a number between 1 and 16, or press Enter to finish.")
+    typer.echo(
+        "Invalid selection. Please enter a number between 1 and 16, or press Enter to finish."
+    )
     return -1
 
 
-def _prompt_field_value(field: str, current: str | None | object, prompt_fn: Callable[[str], str]) -> str | None:
+def _prompt_field_value(
+    field: str, current: str | None | object, prompt_fn: Callable[[str], str]
+) -> str | None:
     """Prompt for a new value. Returns None to keep current, else new string.
 
     For special fields (email_address, phone_number), validates via Email.from_raw()
@@ -121,7 +135,9 @@ def _prompt_field_value(field: str, current: str | None | object, prompt_fn: Cal
     else:
         default_hint = ""
 
-    new_value_str = prompt_fn(f"{field.title()}: {default_hint}: ", default=current_value or "")
+    new_value_str = prompt_fn(
+        f"{field.title()}: {default_hint}: ", default=current_value or ""
+    )
 
     if not new_value_str.strip():
         return current_value
@@ -130,18 +146,14 @@ def _prompt_field_value(field: str, current: str | None | object, prompt_fn: Cal
     if field == "email_address":
         validated = Email.from_raw(new_value_str)
         if validated is None:
-            typer.secho(
-                "Invalid email. Please try again.", style="red"
-            )
+            typer.secho("Invalid email. Please try again.", style="red")
             return None
         return validated.address
 
     if field == "phone_number":
         validated = Phone.from_raw(new_value_str, default_region="US")
         if validated is None:
-            typer.secho(
-                "Invalid phone. Please try again.", style="red"
-            )
+            typer.secho("Invalid phone. Please try again.", style="red")
             return None
         return validated.international
 
@@ -224,11 +236,15 @@ def run_questionnaire(
         if field_name == "email_address":
             new_value_obj = Email.from_raw(new_value)
             if new_value_obj:
-                (profile.profile if isinstance(profile, LinkedInData) else profile).email_address = new_value_obj
+                (
+                    profile.profile if isinstance(profile, LinkedInData) else profile
+                ).email_address = new_value_obj
         elif field_name == "phone_number":
             new_value_obj = Phone.from_raw(new_value, default_region="US")
             if new_value_obj:
-                (profile.profile if isinstance(profile, LinkedInData) else profile).phone_number = new_value_obj
+                (
+                    profile.profile if isinstance(profile, LinkedInData) else profile
+                ).phone_number = new_value_obj
         else:
             setattr(
                 profile.profile if isinstance(profile, LinkedInData) else profile,
@@ -238,7 +254,9 @@ def run_questionnaire(
 
         # Re-display after update
         typer.echo("\nUpdated profile:")
-        _display_profile(profile.profile if isinstance(profile, LinkedInData) else profile)
+        _display_profile(
+            profile.profile if isinstance(profile, LinkedInData) else profile
+        )
 
     # Validate required fields
     if isinstance(profile, LinkedInData):

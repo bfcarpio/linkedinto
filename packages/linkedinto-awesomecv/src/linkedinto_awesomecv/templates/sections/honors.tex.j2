@@ -1,0 +1,12 @@
+<% if honors %>
+\cvsection{Honors \& Awards}
+\begin{cvhonors}
+<% for h in honors %>
+  \cvhonor
+    {<< latex_escape(h.title) >>}
+    {<< latex_escape(h.awarder) >>}
+    {}
+    {<< format_acv_date(h.date) >>}
+<% endfor %>
+\end{cvhonors}
+<% endif %>

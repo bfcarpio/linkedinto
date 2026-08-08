@@ -14,7 +14,7 @@ from linkedinto.domain import (
     ProjectRow,
     VolunteerRow,
 )
-from linkedinto.models_jsonresume import (
+from linkedinto_jsonresume.models import (
     Award,
     Basics,
     Certificate,

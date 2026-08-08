@@ -1,0 +1,12 @@
+<% if publications %>
+\cvsection{Publications}
+\begin{cvhonors}
+<% for pub in publications %>
+  \cvhonor
+    {<< latex_escape(pub.title) >>}
+    {<< latex_escape(pub.publisher) >>}
+    {}
+    {<< format_acv_date(pub.date) >>}
+<% endfor %>
+\end{cvhonors}
+<% endif %>

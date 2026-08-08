@@ -5,10 +5,12 @@ from __future__ import annotations
 # ── Output filenames ──────────────────────────────────────────────
 RESUME_JSON_FILE = "resume.json"
 RENDERC_YAML_FILE = "rendercv.yaml"
+AWESOME_TEX_FILE = "awesome-cv.tex"
 
 # ── Result dict keys (orchestrator / CLI) ─────────────────────────
 RESULT_JSONRESUME = "jsonresume"
 RESULT_RENDERC = "rendercv"
+RESULT_AWESOMECV = "awesomecv"
 
 # ── Encodings ─────────────────────────────────────────────────────
 UTF8_ENCODING = "utf-8"
@@ -19,6 +21,14 @@ CSV_EXTENSION = ".csv"
 JSON_EXTENSION = ".json"
 YAML_EXTENSION = ".yaml"
 YML_EXTENSION = ".yml"
+
+# ── Proficiency ordering (shared by rendercv and awesomecv) ───────
+PROFICIENCY_ORDER: dict[str, int] = {
+    "expert": 0,
+    "advanced": 1,
+    "intermediate": 2,
+    "beginner": 3,
+}
 
 # ── Schema URLs ───────────────────────────────────────────────────
 RENDERCV_SCHEMA_URL = (

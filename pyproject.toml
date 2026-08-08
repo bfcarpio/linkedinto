@@ -22,9 +22,21 @@ dependencies = [
     "pydantic>=2.0",
     "pyyaml>=6.0",
     "phonenumbers>=8.13",
-    "rendercv",
     "python-dateutil>=2.9.0.post0",
+    "linkedinto-jsonresume",
+    "linkedinto-rendercv",
+    "linkedinto-awesomecv",
 ]
+
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.uv.sources]
+linkedinto = { workspace = true }
+linkedinto-jsonresume = { workspace = true }
+linkedinto-rendercv = { workspace = true }
+linkedinto-awesomecv = { workspace = true }
+
 
 [project.optional-dependencies]
 ai = [
@@ -62,7 +74,7 @@ python-version = "3.12"
 all = "error"
 
 [tool.pytest]
-testpaths = ["tests"]
-
+testpaths = ["tests", "packages/*/tests"]
+pythonpath = ["."]
 [tool.coverage.report]
 fail_under = 90

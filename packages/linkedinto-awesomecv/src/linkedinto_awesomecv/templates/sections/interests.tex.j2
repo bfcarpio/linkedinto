@@ -1,0 +1,10 @@
+<% if interests %>
+\cvsection{Interests}
+\begin{cvskills}
+<% for i in interests %>
+  \cvskill
+    {}
+    {<< latex_escape(i.name) >>}
+<% endfor %>
+\end{cvskills}
+<% endif %>

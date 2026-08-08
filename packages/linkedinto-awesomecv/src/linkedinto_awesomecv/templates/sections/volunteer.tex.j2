@@ -1,0 +1,21 @@
+<% if volunteer %>
+\cvsection{Volunteer Experience}
+\begin{cventries}
+<% for v in volunteer %>
+  \cventry
+    {<< latex_escape(v.position) >>}
+    {<< latex_escape(v.organization) >>}
+    {<< latex_escape(v.location) >>}
+    {<< format_date_range(v.started, v.ended) >>}
+    {
+<% if v.highlights %>
+      \begin{cvitems}
+<% for item in v.highlights %>
+        \item {<< latex_escape(item) >>}
+<% endfor %>
+      \end{cvitems}
+<% endif %>
+    }
+<% endfor %>
+\end{cventries}
+<% endif %>

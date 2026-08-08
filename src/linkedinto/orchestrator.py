@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Callable
+from importlib.metadata import entry_points
 from pathlib import Path
 from typing import Any
 
@@ -14,31 +16,38 @@ from linkedinto.config import (
     load_config,
 )
 from linkedinto.constants import (
+    AWESOME_TEX_FILE,
     JSONRESUME_SCHEMA_URL,
     RENDERC_YAML_FILE,
     RENDERCV_SCHEMA_URL,
     RESUME_JSON_FILE,
 )
 from linkedinto.converter import Converter
-from linkedinto.converter_jsonresume import JsonResumeConverter
-from linkedinto.converter_rendercv import RenderCvConverter
 from linkedinto.domain import LinkedInData
 from linkedinto.exceptions import AiGroupingError
 from linkedinto.overwriter import load_partial, overwrite
 from linkedinto.parser import LinkedinZipParser
 from linkedinto.skill_grouper import SkillGrouper
-from linkedinto.writer import write_json, write_yaml
+from linkedinto.writer import write_json, write_tex, write_yaml
 
 _logger = logging.getLogger(__name__)
 
-# Registered output format converters — both are independent peers
-# consuming raw LinkedInData (``requires = None``).
-# The ``requires`` attribute on each converter is validated at runtime:
-# if a required output hasn't been produced yet a ValueError is raised.
-_CONVERTERS: list[Converter] = [
-    JsonResumeConverter(),
-    RenderCvConverter(),
-]
+
+def _discover_converters() -> list[tuple[str, Converter]]:
+    """Discover converter plugins via entry points.
+
+    Returns (entry_point_name, converter_instance) tuples.
+    The entry-point name is the source of truth for the converter key
+    (matching RESULT_* constants), not the class name.
+    """
+    converters = []
+    for ep in entry_points(group="linkedinto.converters"):
+        try:
+            converter_cls = ep.load()
+            converters.append((ep.name, converter_cls()))
+        except Exception as e:  # noqa: BLE001
+            _logger.warning("Failed to load converter '%s': %s", ep.name, e)
+    return converters
 
 
 def _build_grouper(
@@ -72,9 +81,7 @@ def _run_converters(
     if ai_config is not None:
         skill_grouper = _build_grouper(ai_config, tiobe_override, no_cache)
 
-    for converter in _CONVERTERS:
-        name = type(converter).__name__.removesuffix("Converter").lower()
-
+    for name, converter in _discover_converters():
         # Resolve input — either raw data or a previous stage's output
         if converter.requires:
             try:
@@ -114,19 +121,22 @@ def run(
     ai_group: bool = False,
     ai_preview: bool = False,
     ai_model: str | None = None,
+    no_cache: bool = False,
     interactive: bool = False,
     prompt_fn: Callable[[str], str] | None = None,
-):
+    partial_jsonresume: str | Path | None = None,
+    partial_rendercv: str | Path | None = None,
+    partial_awesomecv: str | Path | None = None,
+    jsonresume_only: bool = False,
+    rendercv_only: bool = False,
+    awesomecv_only: bool = False,
+    bullets: str | None = None,
+) -> dict[str, Path]:
     """Full pipeline: parse → convert → overwrite → write.
 
-    Returns a dict mapping ``"jsonresume"`` / ``"rendercv"`` to the
-    written output paths. In ``ai_preview`` mode, prints skill groupings
-    to stdout and returns an empty dict without writing files.
-    """"""Full pipeline: parse → convert → overwrite → write.
-
-    Returns a dict mapping ``"jsonresume"`` / ``"rendercv"`` to the
-    written output paths. In ``ai_preview`` mode, prints skill groupings
-    to stdout and returns an empty dict without writing files.
+    Returns a dict mapping result keys to the written output paths.
+    In ``ai_preview`` mode, prints skill groupings to stdout and returns
+    an empty dict without writing files.
     """
     # Load configuration
     config = load_config()
@@ -204,10 +214,11 @@ def run(
 
     resume = models.get("jsonresume")
     rc_model = models.get("rendercv")
+    acv_model = models.get("awesomecv")
 
     result: dict[str, Path] = {}
 
-    if not rendercv_only and resume is not None:
+    if not rendercv_only and not awesomecv_only and resume is not None:
         resume_dict = resume.model_dump(exclude_none=True)
         if partial_jsonresume:
             partial = load_partial(partial_jsonresume)
@@ -216,7 +227,7 @@ def run(
         write_json(resume_dict, json_path, schema_url=JSONRESUME_SCHEMA_URL)
         result["jsonresume"] = json_path
 
-    if not jsonresume_only and rc_model is not None:
+    if not jsonresume_only and not awesomecv_only and rc_model is not None:
         rc_dict = rc_model.model_dump(exclude_none=True)
         if partial_rendercv:
             partial = load_partial(partial_rendercv)
@@ -224,5 +235,15 @@ def run(
         yaml_path = out / RENDERC_YAML_FILE
         write_yaml(rc_dict, yaml_path, schema_url=RENDERCV_SCHEMA_URL)
         result["rendercv"] = yaml_path
+
+    if not jsonresume_only and not rendercv_only and acv_model is not None:
+        if partial_awesomecv:
+            _logger.warning(
+                "--partial-awesomecv is not supported; "
+                "the .tex output will be written without merging."
+            )
+        tex_path = out / AWESOME_TEX_FILE
+        write_tex(acv_model, tex_path)
+        result["awesomecv"] = tex_path
 
     return result

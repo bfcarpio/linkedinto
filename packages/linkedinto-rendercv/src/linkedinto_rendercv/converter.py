@@ -15,6 +15,7 @@ from rendercv.schema.models.cv.entries.publication import PublicationEntry
 from rendercv.schema.models.cv.social_network import SocialNetwork
 
 from linkedinto.bullet_parser import parse_bullets
+from linkedinto.constants import PROFICIENCY_ORDER
 from linkedinto.converter import Converter
 from linkedinto.date_parser import parse_linkedin_date
 from linkedinto.domain import (
@@ -45,13 +46,6 @@ SECTION_AWARDS = "awards"
 SECTION_LANGUAGES = "languages"
 SECTION_TECHNOLOGIES = "technologies"
 SECTION_SKILLS = "skills"
-
-PROFICIENCY_ORDER: dict[str, int] = {
-    "expert": 0,
-    "advanced": 1,
-    "intermediate": 2,
-    "beginner": 3,
-}
 
 _logger = logging.getLogger(__name__)
 

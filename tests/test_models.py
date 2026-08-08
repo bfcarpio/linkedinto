@@ -3,15 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from rendercv.schema.models.cv.cv import Cv
-from rendercv.schema.models.cv.entries.education import EducationEntry
-from rendercv.schema.models.cv.entries.experience import ExperienceEntry
-from rendercv.schema.models.cv.entries.normal import NormalEntry
-from rendercv.schema.models.cv.entries.one_line import OneLineEntry
-from rendercv.schema.models.cv.entries.publication import PublicationEntry
-from rendercv.schema.models.cv.social_network import SocialNetwork
-
-from linkedinto.models_jsonresume import (
+from linkedinto_jsonresume.models import (
     Award,
     Basics,
     Certificate,
@@ -28,6 +20,13 @@ from linkedinto.models_jsonresume import (
     Volunteer,
     Work,
 )
+from rendercv.schema.models.cv.cv import Cv
+from rendercv.schema.models.cv.entries.education import EducationEntry
+from rendercv.schema.models.cv.entries.experience import ExperienceEntry
+from rendercv.schema.models.cv.entries.normal import NormalEntry
+from rendercv.schema.models.cv.entries.one_line import OneLineEntry
+from rendercv.schema.models.cv.entries.publication import PublicationEntry
+from rendercv.schema.models.cv.social_network import SocialNetwork
 
 # (model class, constructor kwargs, field->expected) for the JSON Resume
 # round-trip cases. Fields prefixed "len(" assert a list length; dotted fields
