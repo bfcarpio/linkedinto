@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import override
+
 from linkedinto.converter_jsonresume import JsonResumeConverter
 from linkedinto.domain import (
     EducationRow,
@@ -11,6 +13,7 @@ from linkedinto.domain import (
     SkillRow,
 )
 from linkedinto.models_jsonresume import JsonResume
+from linkedinto.skill_grouper import Grouper
 
 
 def _minimal_data() -> LinkedInData:
@@ -73,6 +76,23 @@ class TestJsonResumeConverter:
         assert len(resume.skills) == 2
         python_skill = next(s for s in resume.skills if s.name == "Python")
         assert python_skill.level == "Expert"
+
+    def test_convert_skills_grouped(self) -> None:
+        """With a skill grouper set, skills become category + keywords entries."""
+
+        class StubGrouper(Grouper):
+            @override
+            def group(self, skills: list[str]) -> dict[str, list[str]]:
+                return {"DevOps": ["Docker", "K8s"]}
+
+        data = _minimal_data()
+        converter = JsonResumeConverter()
+        converter.skill_grouper = StubGrouper()
+        resume = converter.convert(data)
+        assert len(resume.skills) == 1
+        assert resume.skills[0].name == "DevOps"
+        assert resume.skills[0].keywords == ["Docker", "K8s"]
+        assert resume.skills[0].level is None
 
     def test_sort_positions_by_date(self) -> None:
         """Positions are sorted newest-first by started date."""
