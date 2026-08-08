@@ -141,21 +141,6 @@ def minimal_profile_fixture() -> LinkedInData:
     )
 
 
-def unsorted_dates_fixture() -> LinkedInData:
-    """Positions and education in unsorted order to test sort() works."""
-    return LinkedInData(
-        profile=ProfileRow(first_name="Test", last_name="User"),
-        positions=[
-            PositionRow(company="Older Co", position="Junior", started="2018-01"),
-            PositionRow(company="Newer Co", position="Senior", started="2022-01"),
-        ],
-        education=[
-            EducationRow(school="Old School", field="BA", started="2014-09"),
-            EducationRow(school="New School", field="MA", started="2018-09"),
-        ],
-    )
-
-
 def multiple_websites_fixture() -> LinkedInData:
     """Profile with bracket-format websites."""
     return LinkedInData(
