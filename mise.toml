@@ -38,7 +38,7 @@ description = "Run type checker"
 [tasks.render-pdf]
 run = """
 # Ensure required LaTeX packages are installed (idempotent)
-tlmgr install fontawesome6 source-sans-pro-3 roboto parskip hyperref geometry xcolor fontspec unicode-math etoolbox xifthen xstring tabularx enumitem ragged2e fancyhdr ifxetex bookmark tcolorbox 2>/dev/null || true
+tlmgr install fontawesome6 source-sans-pro-3 roboto parskip hyperref geometry xcolor fontspec unicode-math etoolbox xifthen xstring tabularx enumitem ragged2e fancyhdr ifxetex bookmark tcolorbox accsupp setspace 2>/dev/null || true
 # Clone Awesome-CV into a temp dir to get awesome-cv.cls and supporting files
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT
