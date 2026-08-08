@@ -47,3 +47,8 @@ industry = "Technology"
 linkedin = "https://linkedin.com/in/johndoe"
 twitter = "@johndoe"
 websites = "https://github.com/johndoe,https://johndoe.dev"
+
+# AI configuration for automatic skill grouping (used with --ai-group)
+[ai]
+model = "openai/gpt-4o-mini"
+# api_key = "sk-..."  # prefer LINKEDINTO_AI_API_KEY env var instead

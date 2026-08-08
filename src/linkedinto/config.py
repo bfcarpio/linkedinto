@@ -18,6 +18,23 @@ from linkedinto.logger import setup_logger
 logger = setup_logger(__name__)
 
 
+class AiConfig(BaseModel):
+    """AI provider configuration for skill grouping."""
+
+    model_config = ConfigDict(extra="ignore", frozen=False)
+
+    model: str = Field(
+        default="openai/gpt-4o-mini",
+        description="LiteLLM model string: 'provider/model' (e.g. "
+        "'anthropic/claude-3-haiku-20240307', 'ollama/llama3').",
+    )
+    api_key: str | None = Field(
+        default=None,
+        description="API key. Falls back to LINKEDINTO_AI_API_KEY env var, "
+        "then provider env vars (OPENAI_API_KEY, etc.).",
+    )
+
+
 class LinkedIntoConfig(BaseModel):
     """Configuration model for linkedinto.toml.
 
@@ -100,6 +117,12 @@ class LinkedIntoConfig(BaseModel):
     headline: str | None = Field(
         default=None,
         description="Professional headline.",
+    )
+
+    # AI configuration for automatic skill grouping
+    ai: AiConfig | None = Field(
+        default=None,
+        description="AI configuration for automatic skill grouping.",
     )
 
     @cached_property
@@ -227,7 +250,8 @@ def apply_profile_config(
     # Apply all non-None configuration fields
     for field_name, field_value in config.model_dump(exclude_none=True).items():
         # Skip tiobe_override - handled separately
-        if field_name == "tiobe_override":
+        # Skip ai - not a profile field
+        if field_name in ("tiobe_override", "ai"):
             continue
 
         # Apply override (field_name is guaranteed to exist on config

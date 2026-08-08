@@ -19,3 +19,7 @@ class BulletParseError(LinkedIntoError):
 
 class ConversionError(LinkedIntoError):
     """Raised during JSON Resume or RenderCV conversion."""
+
+
+class AiGroupingError(LinkedIntoError):
+    """Raised when AI skill grouping fails (auth, network, bad response, missing dep)."""
