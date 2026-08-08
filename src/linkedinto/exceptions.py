@@ -9,10 +9,6 @@ class LinkedInParserError(LinkedIntoError):
     """Raised when parsing the LinkedIn ZIP/CSV fails."""
 
 
-class DateParseError(LinkedIntoError):
-    """Raised when a date string cannot be parsed."""
-
-
 class BulletParseError(LinkedIntoError):
     """Raised when bullet parsing options are invalid."""
 
