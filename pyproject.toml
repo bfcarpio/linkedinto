@@ -58,3 +58,6 @@ all = "error"
 
 [tool.pytest]
 testpaths = ["tests"]
+
+[tool.coverage.report]
+fail_under = 90
