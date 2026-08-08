@@ -36,7 +36,10 @@ run = "uv run ty check src/ tests/"
 description = "Run type checker"
 
 [tasks.render-pdf]
-run = """
+run = """#!/usr/bin/env bash
+# Output directory: first arg or current directory
+outdir="${1:-.}"
+outdir=$(cd "$outdir" && pwd)
 # Ensure required LaTeX packages are installed (idempotent)
 tlmgr install fontawesome6 sourcesans roboto parskip hyperref geometry xcolor fontspec unicode-math etoolbox xifthen xstring tabularx enumitem ragged2e fancyhdr ifxetex bookmark tcolorbox accsupp setspace 2>/dev/null || true
 # Make Source Sans 3 and Roboto OTFs visible to fontconfig (xelatex resolves fonts by name)
@@ -55,11 +58,10 @@ tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT
 git clone --depth 1 https://github.com/posquit0/Awesome-CV.git "$tmpdir/awesomecv"
 # Copy rendered .tex into the clone
-cp awesome-cv.tex "$tmpdir/awesomecv/"
+cp "$outdir/awesome-cv.tex" "$tmpdir/awesomecv/"
 cd "$tmpdir/awesomecv"
-# Build the PDF
-xelatex -interaction=nonstopmode awesome-cv.tex
-# Move the resulting PDF back to the original directory
-cp awesome-cv.pdf "$OLDPWD/"
+# Build the PDF (xelatex may return non-zero on warnings but still produce output)
+xelatex -interaction=nonstopmode awesome-cv.tex || true
+cp awesome-cv.pdf "$outdir/"
 """
-description = "Compile awesome-cv.tex to PDF using xelatex (clones Awesome-CV repo for .cls and fonts)"
+description = "Compile awesome-cv.tex to PDF using xelatex. Usage: mise run render-pdf [output-dir]"
