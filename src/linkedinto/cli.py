@@ -80,10 +80,31 @@ def convert(
         "--bullets",
         help='Custom bullet characters (pipe-separated, e.g. "•|*|-")',
     ),
+    ai_group: bool = typer.Option(  # noqa: B008
+        False,
+        "--ai-group",
+        help="Use AI to group skills into logical categories (requires [ai] config).",
+    ),
+    ai_preview: bool = typer.Option(  # noqa: B008
+        False,
+        "--ai-preview",
+        help="Print AI skill groupings to stdout, do not write output files.",
+    ),
+    no_cache: bool = typer.Option(  # noqa: B008
+        False,
+        "--no-cache",
+        help="Skip the AI response cache, force a fresh LLM call.",
+    ),
+    ai_model: str | None = typer.Option(  # noqa: B008
+        None,
+        "--ai-model",
+        help="Override the model from [ai] config (e.g. 'anthropic/claude-3-haiku-20240307').",
+    ),
 ) -> None:
     """Convert a LinkedIn export ZIP to JSON Resume and/or RenderCV YAML."""
     try:
-        output_dir.mkdir(parents=True, exist_ok=True)
+        if not ai_preview:
+            output_dir.mkdir(parents=True, exist_ok=True)
 
         result = run_pipeline(
             zip_path=zip_file,
@@ -93,7 +114,14 @@ def convert(
             jsonresume_only=jsonresume_only,
             rendercv_only=rendercv_only,
             bullets=bullets,
+            ai_group=ai_group,
+            ai_preview=ai_preview,
+            no_cache=no_cache,
+            ai_model=ai_model,
         )
+
+        if ai_preview:
+            return
 
         msg_parts: list[str] = []
         if RESULT_JSONRESUME in result:

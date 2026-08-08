@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from pathlib import Path
 from typing import Any
 
-from linkedinto.config import apply_profile_config, get_tiobe_override, load_config
+from linkedinto.config import (
+    AiConfig,
+    apply_profile_config,
+    get_tiobe_override,
+    load_config,
+)
 from linkedinto.constants import (
     JSONRESUME_SCHEMA_URL,
     RENDERC_YAML_FILE,
@@ -17,8 +23,10 @@ from linkedinto.converter import Converter
 from linkedinto.converter_jsonresume import JsonResumeConverter
 from linkedinto.converter_rendercv import RenderCvConverter
 from linkedinto.domain import LinkedInData
+from linkedinto.exceptions import AiGroupingError
 from linkedinto.overwriter import load_partial, overwrite
 from linkedinto.parser import LinkedinZipParser
+from linkedinto.skill_grouper import SkillGrouper
 from linkedinto.writer import write_json, write_yaml
 
 _logger = logging.getLogger(__name__)
@@ -33,8 +41,23 @@ _CONVERTERS: list[Converter] = [
 ]
 
 
+def _build_grouper(
+    ai_config: AiConfig,
+    tiobe_override: frozenset[str] | None,
+    no_cache: bool,
+) -> SkillGrouper:
+    """Construct a SkillGrouper from AI config, honoring --no-cache."""
+    grouper = SkillGrouper(ai_config, tiobe_override=tiobe_override)
+    if no_cache:
+        grouper.disable_cache()
+    return grouper
+
+
 def _run_converters(
-    parsed: LinkedInData, tiobe_override: frozenset[str] | None = None
+    parsed: LinkedInData,
+    tiobe_override: frozenset[str] | None = None,
+    ai_config: AiConfig | None = None,
+    no_cache: bool = False,
 ) -> dict[str, Any]:
     """Run all registered converters against parsed LinkedIn data.
 
@@ -44,6 +67,10 @@ def _run_converters(
     outputs: dict[str, Any] = {}
 
     parsed.sort()
+
+    skill_grouper = None
+    if ai_config is not None:
+        skill_grouper = _build_grouper(ai_config, tiobe_override, no_cache)
 
     for converter in _CONVERTERS:
         name = type(converter).__name__.removesuffix("Converter").lower()
@@ -66,6 +93,9 @@ def _run_converters(
         if hasattr(converter, "tiobe_override"):
             converter.tiobe_override = tiobe_override
 
+        # Set AI skill grouper (None resets any previous run's grouper)
+        converter.skill_grouper = skill_grouper
+
         output = converter.convert(input_data)
         outputs[name] = output
 
@@ -87,21 +117,46 @@ def run(
     rendercv_only: bool = False,
     bullets: str | None = None,
     verbose: bool = False,
+    ai_group: bool = False,
+    ai_preview: bool = False,
+    no_cache: bool = False,
+    ai_model: str | None = None,
 ) -> dict[str, Path]:
     """Full pipeline: parse → convert → overwrite → write.
 
     Returns a dict mapping ``"jsonresume"`` / ``"rendercv"`` to the
-    written output paths.
+    written output paths. In ``ai_preview`` mode, prints skill groupings
+    to stdout and returns an empty dict without writing files.
     """
-    out = Path(output_dir)
-    out.mkdir(parents=True, exist_ok=True)
-
     # Load configuration
     config = load_config()
     tiobe_override = get_tiobe_override(config)
 
+    # --ai-group is the master switch; --ai-preview implies it
+    ai_config: AiConfig | None = None
+    if ai_group or ai_preview:
+        ai_config = config.ai if config else None
+        if ai_config is None:
+            raise AiGroupingError(
+                "--ai-group requires an [ai] section in linkedinto.toml"
+            )
+        if ai_model:
+            ai_config.model = ai_model
+
     parser = LinkedinZipParser()
     data = parser.parse(zip_path)
+
+    # Preview mode: group skills, print to stdout, write nothing
+    if ai_preview:
+        assert ai_config is not None  # guaranteed by check above
+        grouper = _build_grouper(ai_config, tiobe_override, no_cache)
+        skill_names = [s.name for s in data.skills if s.name]
+        groups = grouper.group(skill_names)
+        print(json.dumps(groups, indent=2))
+        return {}
+
+    out = Path(output_dir)
+    out.mkdir(parents=True, exist_ok=True)
 
     # Apply configuration overrides to profile data
     if config and data.profile:
@@ -138,8 +193,10 @@ def run(
                 # Keep None values as None, empty strings as empty strings
                 setattr(data.profile, field_name, field_value)
 
-    # Run converters with TIOBE override
-    models = _run_converters(data, tiobe_override=tiobe_override)
+    # Run converters with TIOBE override and optional AI grouping
+    models = _run_converters(
+        data, tiobe_override=tiobe_override, ai_config=ai_config, no_cache=no_cache
+    )
 
     resume = models.get("jsonresume")
     rc_model = models.get("rendercv")

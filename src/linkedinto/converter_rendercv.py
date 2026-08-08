@@ -130,6 +130,15 @@ class RenderCvConverter(Converter):
 
     def _build_skills(self, skills: list[SkillRow]) -> dict[str, list[Any]]:
         """Split skills into programming languages (technologies) and non-programming skills."""
+        if self.skill_grouper is not None:
+            skill_names = [s.name for s in skills if s.name]
+            groups = self.skill_grouper.group(skill_names)
+            entries = [
+                NormalEntry(name=category, highlights=skills_list)
+                for category, skills_list in groups.items()
+            ]
+            return {SECTION_SKILLS: entries} if entries else {}
+
         prog_skills: list[str] = []
         non_prog_skills: list[tuple[str, str]] = []  # (name, proficiency)
 

@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from linkedinto.skill_grouper import Grouper
 
 
 class Converter(ABC):
@@ -30,6 +33,9 @@ class Converter(ABC):
     If set, replaces the default TIOBE_TOP_50 set when checking if a skill
     is a programming language.
     """
+
+    skill_grouper: Grouper | None = None
+    """Optional AI skill grouper. Set by orchestrator before convert()."""
 
     @abstractmethod
     def convert(self, data: Any) -> Any:

@@ -74,7 +74,17 @@ class JsonResumeConverter(Converter):
 
         resume.work = [self._convert_position(p) for p in data.positions]
         resume.education = [self._convert_education(e) for e in data.education]
-        resume.skills = [Skill(name=s.name, level=s.proficiency) for s in data.skills]
+        if self.skill_grouper is not None:
+            skill_names = [s.name for s in data.skills if s.name]
+            groups = self.skill_grouper.group(skill_names)
+            resume.skills = [
+                Skill(name=category, keywords=skills)
+                for category, skills in groups.items()
+            ]
+        else:
+            resume.skills = [
+                Skill(name=s.name, level=s.proficiency) for s in data.skills
+            ]
         resume.languages = [
             Language(language=lang.name, fluency=lang.proficiency)
             for lang in data.languages
