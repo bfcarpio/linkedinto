@@ -30,4 +30,9 @@ dist/
 
 resume.json
 rendercv.yaml
+awesome-cv.tex
+awesome-cv.cls
+awesome-cv.log
+awesome-cv.aux
+awesome-cv.pdf
 linkedinto.toml
