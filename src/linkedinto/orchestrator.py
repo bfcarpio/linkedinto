@@ -111,18 +111,18 @@ def run(
     zip_path: str | Path,
     output_dir: str | Path,
     *,
-    partial_jsonresume: str | Path | None = None,
-    partial_rendercv: str | Path | None = None,
-    jsonresume_only: bool = False,
-    rendercv_only: bool = False,
-    bullets: str | None = None,
-    verbose: bool = False,
     ai_group: bool = False,
     ai_preview: bool = False,
-    no_cache: bool = False,
     ai_model: str | None = None,
-) -> dict[str, Path]:
+    interactive: bool = False,
+    prompt_fn: Callable[[str], str] | None = None,
+):
     """Full pipeline: parse → convert → overwrite → write.
+
+    Returns a dict mapping ``"jsonresume"`` / ``"rendercv"`` to the
+    written output paths. In ``ai_preview`` mode, prints skill groupings
+    to stdout and returns an empty dict without writing files.
+    """"""Full pipeline: parse → convert → overwrite → write.
 
     Returns a dict mapping ``"jsonresume"`` / ``"rendercv"`` to the
     written output paths. In ``ai_preview`` mode, prints skill groupings
