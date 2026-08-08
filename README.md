@@ -71,7 +71,7 @@ Linkedinto can use AI to automatically categorize your skills into logical group
 4. **LLM processing** - Group categories (requires AI model from `[ai]` config)
 
 **Output per converter:**
-- **RenderCV**: Programming languages go to a dedicated `technologies` section; other skills become categorized `skills` entries
+- **RenderCV**: All skills go to a single `skills` section as grouped label/details entries
 - **JSON Resume**: All skills become categorized `skills` array as `Skill(name=category, keywords=[...])`
 
 **Usage:**

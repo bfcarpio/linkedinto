@@ -44,7 +44,6 @@ SECTION_PROJECTS = "projects"
 SECTION_PUBLICATIONS = "publications"
 SECTION_AWARDS = "awards"
 SECTION_LANGUAGES = "languages"
-SECTION_TECHNOLOGIES = "technologies"
 SECTION_SKILLS = "skills"
 
 _logger = logging.getLogger(__name__)
@@ -138,7 +137,11 @@ class RenderCvConverter(Converter):
             raise ConversionError("RenderCV output failed schema validation") from e
 
     def _build_skills(self, skills: list[SkillRow]) -> dict[str, list[Any]]:
-        """Split skills into programming languages (technologies) and non-programming skills."""
+        """Group skills into categorized OneLineEntry entries for the skills section.
+
+        When a skill_grouper is set, uses its categories; otherwise splits
+        programming languages into one group and all others into a second group.
+        """
         if self.skill_grouper is not None:
             skill_names = [s.name for s in skills if s.name]
             groups = self.skill_grouper.group(skill_names)
