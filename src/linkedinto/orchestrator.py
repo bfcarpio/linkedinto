@@ -99,10 +99,10 @@ def _run_converters(
         output = converter.convert(input_data)
         outputs[name] = output
 
-        # TODO: Enable validation once schema validation is implemented
-        # if errors := converter.validate(output):
-        #     for err in errors:
-        #         _logger.warning("Validation [%s]: %s", name, err)
+        # Run converter validation (raises if invalid)
+        if errors := converter.validate(output):
+            for err in errors:
+                _logger.warning("Validation [%s]: %s", name, err)
 
     return outputs
 

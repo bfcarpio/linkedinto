@@ -10,10 +10,11 @@ import tomllib
 from functools import cached_property
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from linkedinto.logger import setup_logger
 from linkedinto.phone_utils import Phone
+from linkedinto.validation import format_validation_error
 
 # Setup module logger
 logger = setup_logger(__name__)
@@ -31,6 +32,7 @@ class AiConfig(BaseModel):
         default=DEFAULT_AI_MODEL,
         description="LiteLLM model string: 'provider/model' (e.g. "
         "'anthropic/claude-3-haiku-20240307', 'ollama/llama3').",
+        examples=["openai/gpt-4o-mini"],
     )
     api_key: str | None = Field(
         default=None,
@@ -43,6 +45,7 @@ class AiConfig(BaseModel):
         "LLM call. Skills listed here are never sent to the LLM. Keys are "
         'category names (e.g. "Tools & Technologies", "Interpersonal Skills"), '
         "values are exact skill names.",
+        examples=[{"Tools & Technologies": ["Python", "Docker"]}],
     )
 
 
@@ -62,72 +65,89 @@ class LinkedIntoConfig(BaseModel):
         max_length=50,
         description="Complete replacement for TIOBE_TOP_50 frozenset. "
         "If provided, replaces the entire list (all-or-nothing).",
+        examples=["python", "javascript", "rust"],
     )
 
     # Identity fields matching ProfileRow in domain.py
     first_name: str | None = Field(
         default=None,
         description="First name for the resume/profile.",
+        examples=["Jane"],
     )
     last_name: str | None = Field(
         default=None,
         description="Last name for the resume/profile.",
+        examples=["Doe"],
     )
     address: str | None = Field(
         default=None,
         description="Street address.",
+        examples=["123 Main St, Suite 400"],
     )
     zip_code: str | None = Field(
         default=None,
         description="Postal/ZIP code.",
+        examples=["94105"],
     )
     geo_location: str | None = Field(
         default=None,
         description="Geographic location (city, state, etc.).",
+        examples=["San Francisco, CA, US"],
     )
     occupation: str | None = Field(
         default=None,
         description="Current occupation/title.",
+        examples=["Senior Software Engineer"],
     )
     summary: str | None = Field(
         default=None,
         description="Professional summary/objective.",
+        examples=["Experienced engineer with 10+ years building distributed systems."],
     )
     industry: str | None = Field(
         default=None,
         description="Industry field.",
+        examples=["Technology / Software"],
     )
     country: str | None = Field(
         default=None,
         description="Country name.",
+        examples=["United States"],
     )
     country_code: str | None = Field(
         default=None,
         description="Country code (ISO 3166-1 alpha-2).",
+        examples=["US"],
     )
     email_address: str | None = Field(
         default=None,
         description="Primary email address.",
+        examples=["jane.doe@example.com"],
     )
     phone_number: str | None = Field(
         default=None,
         description="Primary phone number.",
+        examples=["+1 (555) 123-4567"],
     )
     twitter: str | None = Field(
         default=None,
         description="Twitter/X username.",
+        examples=["janedoe"],
     )
     linkedin: str | None = Field(
         default=None,
         description="LinkedIn profile URL.",
+        examples=["https://www.linkedin.com/in/janedoe"],
     )
     websites: str | None = Field(
         default=None,
         description="Other websites (comma-separated).",
+        examples=["https://janedoe.dev, https://github.com/janedoe"],
     )
     headline: str | None = Field(
         default=None,
         description="Professional headline.",
+        examples=["Senior Software Engineer at Acme Corp"],
     )
 
     # AI configuration for automatic skill grouping
@@ -214,8 +234,9 @@ def load_config(config_path: Path | str | None = None) -> LinkedIntoConfig | Non
     except tomllib.TOMLDecodeError as e:
         logger.warning(f"Invalid TOML syntax in {config_path}: {e}")
         return None
-    except Exception as e:
-        logger.warning(f"Error loading configuration from {config_path}: {e}")
+    except ValidationError as e:
+        for msg in format_validation_error(e, LinkedIntoConfig):
+            logger.warning(msg)
         return None
 
 

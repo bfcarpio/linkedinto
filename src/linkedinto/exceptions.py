@@ -19,3 +19,7 @@ class ConversionError(LinkedIntoError):
 
 class AiGroupingError(LinkedIntoError):
     """Raised when AI skill grouping fails (auth, network, bad response, missing dep)."""
+
+
+class ConfigValidationError(LinkedIntoError):
+    """Raised when configuration validation fails."""
