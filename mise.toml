@@ -23,13 +23,13 @@ run = "uv run pytest --cov=linkedinto --cov-report=html --cov-report=xml && echo
 description = "Generate HTML and XML coverage reports"
 
 [tasks.lint]
-run = "uvx ruff check src/ tests/"
+run = "uv run ruff check src/ tests/"
 description = "Run ruff linter"
 
 [tasks.format]
-run = "uvx ruff format --respect-gitignore --exclude tests/fixtures/"
+run = "uv run ruff format --respect-gitignore --exclude tests/fixtures/"
 description = "Check formatting with ruff"
 
 [tasks.typecheck]
-run = "uvx ty check src/ tests/"
+run = "uv run ty check src/ tests/"
 description = "Run type checker"

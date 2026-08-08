@@ -64,7 +64,7 @@ uv run prek install
 # Lint, format check, type check, tests
 uv run ruff check src/ tests/
 uv run ruff format --check src/
-uv run python -m ty check src/ tests/
+uv run ty check src/ tests/
 uv run pytest
 ```
 
