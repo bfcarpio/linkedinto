@@ -7,6 +7,7 @@ from typing import override
 from linkedinto_jsonresume.converter import JsonResumeConverter
 from linkedinto_jsonresume.models import JsonResume
 
+from linkedinto.degree import Degree
 from linkedinto.domain import (
     EducationRow,
     LinkedInData,
@@ -32,7 +33,12 @@ def _minimal_data() -> LinkedInData:
             ),
         ],
         education=[
-            EducationRow(school="MIT", degree="BS", field="CS", started="2016-09"),
+            EducationRow(
+                school="MIT",
+                degree=Degree.from_text("BS"),
+                field="CS",
+                started="2016-09",
+            ),
         ],
         skills=[
             SkillRow(name="Python", proficiency="Expert"),
@@ -69,7 +75,7 @@ class TestJsonResumeConverter:
         assert len(resume.education) == 1
         assert resume.education[0].institution == "MIT"
         assert resume.education[0].area == "CS"
-        assert resume.education[0].study_type == "BS"
+        assert resume.education[0].study_type == "Bachelor of Science"
 
     def test_convert_skills(self) -> None:
         data = _minimal_data()

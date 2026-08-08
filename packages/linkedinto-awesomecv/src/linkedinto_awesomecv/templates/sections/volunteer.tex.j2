@@ -8,10 +8,13 @@
     {<< latex_escape(v.location) >>}
     {<< format_date_range(v.started, v.ended) >>}
     {
-<% if v.highlights %>
+<% if v.summary or v.highlights %>
       \begin{cvitems}
+<% if v.summary %>
+        \item {<< v.summary >>}
+<% endif %>
 <% for item in v.highlights %>
-        \item {<< latex_escape(item) >>}
+        \item {<< item >>}
 <% endfor %>
       \end{cvitems}
 <% endif %>

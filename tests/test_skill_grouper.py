@@ -157,6 +157,33 @@ class TestSkillGrouper:
         assert first == second == {DEVOPS: [KUBERNETES]}
         assert len(calls) == 1
 
+    def test_has_cached_groups_false_on_miss(self, tmp_path: Path) -> None:
+        grouper = _grouper(tmp_path)
+        assert grouper.has_cached_groups([KUBERNETES]) is False
+
+    def test_has_cached_groups_true_after_populate(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[_RecordedCall] = []
+        _patch_completion(monkeypatch, {DEVOPS: [KUBERNETES]}, calls)
+        grouper = _grouper(tmp_path)
+        grouper.group([KUBERNETES])
+        assert grouper.has_cached_groups([KUBERNETES]) is True
+
+    def test_has_cached_groups_false_when_disabled(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[_RecordedCall] = []
+        _patch_completion(monkeypatch, {DEVOPS: [KUBERNETES]}, calls)
+        grouper = _grouper(tmp_path)
+        grouper.group([KUBERNETES])
+        grouper.disable_cache()
+        assert grouper.has_cached_groups([KUBERNETES]) is False
+
+    def test_has_cached_groups_empty_skills(self, tmp_path: Path) -> None:
+        grouper = _grouper(tmp_path)
+        assert grouper.has_cached_groups([]) is False
+
     def test_disable_cache_forces_fresh_call(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

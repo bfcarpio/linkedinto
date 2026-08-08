@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from linkedinto.degree import Degree
 from linkedinto.domain import (
     AwardHonorRow,
     EducationRow,
@@ -45,7 +46,7 @@ FULL_POSITIONS: list[PositionRow] = [
 FULL_EDUCATION: list[EducationRow] = [
     EducationRow(
         school="MIT",
-        degree="BS",
+        degree=Degree.from_text("BS"),
         field="Computer Science",
         started="2016-09",
         ended="2020-06",

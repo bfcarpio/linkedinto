@@ -24,8 +24,9 @@ class TestParseBullets:
             ),
             ("• Direct bullet", "", ["Direct bullet"]),
             ("Intro * Item one * Item two", "Intro", ["Item one", "Item two"]),
-            # A bullet without a preceding space should not split at that point.
-            ("A •B•C", "A", ["B•C"]),
+            # Unambiguous bullet chars (•, ➲, etc.) split anywhere — even
+            # without a preceding space, since they never appear mid-word.
+            ("A •B•C", "A", ["B", "C"]),
             ("Summary   •   Point", "Summary", ["Point"]),
         ],
     )

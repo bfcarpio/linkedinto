@@ -66,6 +66,8 @@ def _run_converters(
     parsed: LinkedInData,
     tiobe_override: frozenset[str] | None = None,
     ai_config: AiConfig | None = None,
+    *,
+    ai_group: bool = False,
     no_cache: bool = False,
 ) -> dict[str, Any]:
     """Run all registered converters against parsed LinkedIn data.
@@ -78,8 +80,20 @@ def _run_converters(
     parsed.sort()
 
     skill_grouper = None
+    skill_groups: dict[str, list[str]] | None = None
     if ai_config is not None:
-        skill_grouper = _build_grouper(ai_config, tiobe_override, no_cache)
+        if ai_group:
+            # Full AI mode: LLM call on cache miss
+            skill_grouper = _build_grouper(ai_config, tiobe_override, no_cache)
+            skill_names = [s.name for s in parsed.skills if s.name]
+            skill_groups = skill_grouper.group(skill_names)
+        elif not no_cache:
+            # Cache-only: use disk cache if available, no LLM call
+            grouper = SkillGrouper(ai_config, tiobe_override=tiobe_override)
+            skill_names = [s.name for s in parsed.skills if s.name]
+            if grouper.has_cached_groups(skill_names):
+                skill_grouper = grouper
+                skill_groups = grouper.group(skill_names)
 
     for name, converter in _discover_converters():
         # Resolve input — either raw data or a previous stage's output
@@ -100,8 +114,9 @@ def _run_converters(
         if hasattr(converter, "tiobe_override"):
             converter.tiobe_override = tiobe_override
 
-        # Set AI skill grouper (None resets any previous run's grouper)
+        # Set AI skill grouper and pre-computed groups (None resets previous run)
         converter.skill_grouper = skill_grouper
+        converter.skill_groups = skill_groups
 
         output = converter.convert(input_data)
         outputs[name] = output
@@ -152,6 +167,9 @@ def run(
             )
         if ai_model:
             ai_config.model = ai_model
+    elif not no_cache:
+        # Cache-only mode: attempt disk cache even without --ai-group
+        ai_config = config.ai if config else None
 
     parser = LinkedinZipParser()
     data = parser.parse(zip_path)
@@ -209,7 +227,11 @@ def run(
 
     # Run converters with TIOBE override and optional AI grouping
     models = _run_converters(
-        data, tiobe_override=tiobe_override, ai_config=ai_config, no_cache=no_cache
+        data,
+        tiobe_override=tiobe_override,
+        ai_config=ai_config,
+        ai_group=ai_group,
+        no_cache=no_cache,
     )
 
     resume = models.get("jsonresume")
@@ -228,12 +250,15 @@ def run(
         result["jsonresume"] = json_path
 
     if not jsonresume_only and not awesomecv_only and rc_model is not None:
-        rc_dict = rc_model.model_dump(exclude_none=True)
+        rc_dict = rc_model.model_dump(exclude_none=True, mode="json")
         if partial_rendercv:
             partial = load_partial(partial_rendercv)
-            rc_dict = overwrite(rc_dict, partial)
+            # Partial RenderCV files use the {cv: {...}} wrapper structure;
+            # apply overrides inside the cv dict, then re-wrap.
+            partial_cv = partial.get("cv", partial)
+            rc_dict = overwrite(rc_dict, partial_cv)
         yaml_path = out / RENDERC_YAML_FILE
-        write_yaml(rc_dict, yaml_path, schema_url=RENDERCV_SCHEMA_URL)
+        write_yaml({"cv": rc_dict}, yaml_path, schema_url=RENDERCV_SCHEMA_URL)
         result["rendercv"] = yaml_path
 
     if not jsonresume_only and not rendercv_only and acv_model is not None:

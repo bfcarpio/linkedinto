@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import tempfile
 from abc import ABC, abstractmethod
@@ -24,9 +25,8 @@ from linkedinto.language_detector import (
     is_programming_language,
     normalize_language_name,
 )
-from linkedinto.logger import setup_logger
 
-_logger = setup_logger(__name__)
+_logger = logging.getLogger(__name__)
 
 PROGRAMMING_LANGUAGES = "Programming Languages"
 OTHER_CATEGORY = "Other"
@@ -172,20 +172,13 @@ class SkillGrouper(Grouper):
         """Skip the disk cache — force a fresh LLM call on next group()."""
         self._cache = None
 
-    @override
-    def group(self, skills: list[str]) -> dict[str, list[str]]:
-        """Group skills. Returns {} for empty input.
+    def _prefilter(
+        self, skills: list[str]
+    ) -> tuple[dict[str, list[str]], list[str], list[str], int]:
+        """Run config presets and programming-language detection.
 
-        Pipeline: config presets (deterministic, exact match) → TIOBE/Pygments
-        pre-filter → disk cache → LLM. Preset and programming-language skills
-        never reach the LLM.
+        Returns (preset_groups, prog_langs, non_prog, preset_count).
         """
-        if not skills:
-            return {}
-
-        # 1. Config presets — exact-match, user-controlled, no LLM.
-        # A preset targeting PROGRAMMING_LANGUAGES is folded into prog_langs
-        # below so the deterministic and preset buckets merge into one.
         preset_groups: dict[str, list[str]] = {}
         preset_prog_langs: list[str] = []
         for skill in skills:
@@ -197,9 +190,6 @@ class SkillGrouper(Grouper):
             else:
                 preset_groups.setdefault(category, []).append(skill)
         unpreset = [s for s in skills if s not in self._presets]
-
-        # 2. Pre-filter programming languages (deterministic, no LLM);
-        #    preset overrides TIOBE detection
         detected = [
             s
             for s in unpreset
@@ -207,12 +197,40 @@ class SkillGrouper(Grouper):
         ]
         prog_langs = preset_prog_langs + [normalize_language_name(s) for s in detected]
         non_prog = [s for s in unpreset if s not in set(detected)]
+        preset_count = len(skills) - len(unpreset)
+        return preset_groups, prog_langs, non_prog, preset_count
+
+    def has_cached_groups(self, skills: list[str]) -> bool:
+        """Check if disk cache has groupings for these skills (no LLM call).
+
+        Runs the same preset + programming-language pre-filter as ``group()``
+        so the cache key matches.
+        """
+        if not skills or self._cache is None:
+            return False
+        _preset_groups, _prog_langs, non_prog, _preset_count = self._prefilter(skills)
+        if not non_prog:
+            return False
+        return self._cache.get(non_prog, self._tiobe_override) is not None
+
+    @override
+    def group(self, skills: list[str]) -> dict[str, list[str]]:
+        """Group skills. Returns {} for empty input.
+
+        Pipeline: config presets (deterministic, exact match) → TIOBE/Pygments
+        pre-filter → disk cache → LLM. Preset and programming-language skills
+        never reach the LLM.
+        """
+        if not skills:
+            return {}
+
+        preset_groups, prog_langs, non_prog, preset_count = self._prefilter(skills)
 
         _logger.info(
             "AI skill grouping: %d total → %d preset → %d programming languages"
             " → %d sent to LLM",
             len(skills),
-            len(skills) - len(unpreset),
+            preset_count,
             len(prog_langs),
             len(non_prog),
         )
@@ -227,8 +245,9 @@ class SkillGrouper(Grouper):
         if self._cache is not None:
             cached = self._cache.get(non_prog, self._tiobe_override)
             if cached is not None:
-                _logger.info(
-                    "AI skill grouping: cache hit (%d categories)", len(cached)
+                _logger.warning(
+                    "AI skill grouping: using cached groups (%d categories)",
+                    len(cached),
                 )
                 merged = self._merge(prog_langs, cached)
                 return {**preset_groups, **merged}
@@ -307,8 +326,14 @@ class SkillGrouper(Grouper):
         if self._api_key:
             kwargs["api_key"] = self._api_key
 
+        from rich.console import Console
+
+        console = Console(stderr=True)
         try:
-            response = litellm.completion(**kwargs)
+            with console.status(
+                f"[bold blue]Grouping {len(skills)} skills with {self._model}…"
+            ):
+                response = litellm.completion(**kwargs)
         except Exception as exc:
             raise AiGroupingError(f"LLM call to {self._model} failed: {exc}") from exc
 

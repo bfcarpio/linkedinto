@@ -14,6 +14,7 @@ from linkedinto.domain import (
     ProjectRow,
     VolunteerRow,
 )
+from linkedinto.url_extractor import extract_websites
 from linkedinto_jsonresume.models import (
     Award,
     Basics,
@@ -34,6 +35,14 @@ from linkedinto_jsonresume.models import (
 
 NETWORK_LINKEDIN = "LinkedIn"
 NETWORK_TWITTER = "Twitter"
+
+
+def _is_platform_url(url: str) -> bool:
+    """Return True if ``url`` points to a known code-hosting platform."""
+    return any(
+        domain in url
+        for domain in ("github.com/", "gitlab.com/", "bitbucket.org/", "codeberg.org/")
+    )
 
 
 class JsonResumeConverter(Converter):
@@ -58,6 +67,34 @@ class JsonResumeConverter(Converter):
             if p.twitter:
                 profiles.append(Profile(network=NETWORK_TWITTER, username=p.twitter))
 
+            # Detect platform profiles from website URLs
+            parsed_websites = extract_websites(p.websites)
+            for url in parsed_websites:
+                if "github.com/" in url:
+                    username = url.rstrip("/").split("github.com/")[-1].split("/")[0]
+                    if username:
+                        profiles.append(
+                            Profile(network="GitHub", username=username, url=url)
+                        )
+                elif "gitlab.com/" in url:
+                    username = url.rstrip("/").split("gitlab.com/")[-1].split("/")[0]
+                    if username:
+                        profiles.append(
+                            Profile(network="GitLab", username=username, url=url)
+                        )
+                elif "bitbucket.org/" in url:
+                    username = url.rstrip("/").split("bitbucket.org/")[-1].split("/")[0]
+                    if username:
+                        profiles.append(
+                            Profile(network="Bitbucket", username=username, url=url)
+                        )
+                elif "codeberg.org/" in url:
+                    username = url.rstrip("/").split("codeberg.org/")[-1].split("/")[0]
+                    if username:
+                        profiles.append(
+                            Profile(network="Codeberg", username=username, url=url)
+                        )
+
             name = None
             if p.first_name or p.last_name:
                 name = f"{p.first_name or ''} {p.last_name or ''}".strip()
@@ -67,6 +104,7 @@ class JsonResumeConverter(Converter):
                 label=p.headline or p.occupation,
                 email=p.email_address.address if p.email_address else None,
                 phone=p.phone_number.international if p.phone_number else None,
+                url=next((u for u in parsed_websites if not _is_platform_url(u)), None),
                 summary=p.summary,
                 location=location,
                 profiles=profiles,
@@ -74,12 +112,13 @@ class JsonResumeConverter(Converter):
 
         resume.work = [self._convert_position(p) for p in data.positions]
         resume.education = [self._convert_education(e) for e in data.education]
-        if self.skill_grouper is not None:
+        if self.skill_groups is None and self.skill_grouper is not None:
             skill_names = [s.name for s in data.skills if s.name]
-            groups = self.skill_grouper.group(skill_names)
+            self.skill_groups = self.skill_grouper.group(skill_names)
+        if self.skill_groups is not None:
             resume.skills = [
                 Skill(name=category, keywords=skills)
-                for category, skills in groups.items()
+                for category, skills in self.skill_groups.items()
             ]
         else:
             resume.skills = [
@@ -166,7 +205,7 @@ class JsonResumeConverter(Converter):
         return Education(
             institution=edu.school,
             area=edu.field,
-            study_type=edu.degree,
+            study_type=edu.degree.full if edu.degree else None,
             start_date=parse_linkedin_date(edu.started),
             end_date=parse_linkedin_date(edu.ended),
             score=edu.grade,

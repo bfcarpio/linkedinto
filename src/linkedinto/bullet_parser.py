@@ -29,8 +29,18 @@ def parse_bullets(  # noqa: SIM108
     else:
         bullet_chars = _DEFAULT_BULLET_CHARS
 
-    escaped = re.escape(bullet_chars)
-    pattern = rf"(?:^|(?<=\s))([{escaped}])"
+    # Exotic bullet chars (everything except '*') are unambiguous markers —
+    # match them anywhere, even after punctuation.  '*' needs a whitespace
+    # guard to avoid false positives like "5 * 3".
+    ambiguous = set("*")
+    escaped_ambiguous = re.escape("".join(c for c in bullet_chars if c in ambiguous))
+    escaped_unambiguous = re.escape(
+        "".join(c for c in bullet_chars if c not in ambiguous)
+    )
+    parts = [rf"(?:^|(?<=\s))([{escaped_ambiguous}])"]
+    if escaped_unambiguous:
+        parts.append(rf"([{escaped_unambiguous}])")
+    pattern = "|".join(parts)
 
     text = text.strip()
     matches = list(re.finditer(pattern, text))

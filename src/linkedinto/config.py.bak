@@ -31,16 +31,21 @@ class AiConfig(BaseModel):
 
     model: str = Field(
         default=DEFAULT_AI_MODEL,
-        description="LiteLLM model string: 'provider/model' (e.g. \"openai/gpt-4o-mini\", 'anthropic/claude-3-haiku-20240307', 'ollama/llama3').",
+        description="LiteLLM model string: 'provider/model' (e.g. "
+        "'anthropic/claude-3-haiku-20240307', 'ollama/llama3').",
         examples=["openai/gpt-4o-mini"],
     )
     api_key: str | None = Field(
         default=None,
-        description="API key. Falls back to LINKEDINTO_AI_API_KEY env var, then provider env vars (OPENAI_API_KEY, etc.).",
+        description="API key. Falls back to LINKEDINTO_AI_API_KEY env var, "
+        "then provider env vars (OPENAI_API_KEY, etc.).",
     )
     skill_groups: dict[str, list[str]] | None = Field(
         default=None,
-        description="Deterministic skill→category presets, applied before the LLM call. Skills listed here are never sent to the LLM. Keys are category names (e.g. 'Tools & Technologies', 'Interpersonal Skills'); values are exact skill names.",
+        description="Deterministic skill→category presets, applied before the "
+        "LLM call. Skills listed here are never sent to the LLM. Keys are "
+        'category names (e.g. "Tools & Technologies", "Interpersonal Skills"), '
+        "values are exact skill names.",
         examples=[{"Tools & Technologies": ["Python", "Docker"]}],
     )
 
@@ -59,7 +64,8 @@ class LinkedIntoConfig(BaseModel):
     tiobe_override: list[str] | None = Field(
         default=None,
         max_length=50,
-        description="Complete replacement for TIOBE_TOP_50 frozenset. If provided, replaces the entire list (all-or-nothing).",
+        description="Complete replacement for TIOBE_TOP_50 frozenset. "
+        "If provided, replaces the entire list (all-or-nothing).",
         examples=["python", "javascript", "rust"],
     )
 
@@ -134,10 +140,10 @@ class LinkedIntoConfig(BaseModel):
         description="LinkedIn profile URL.",
         examples=["https://www.linkedin.com/in/janedoe"],
     )
-    websites: list[str] | None = Field(
+    websites: str | None = Field(
         default=None,
-        description="Personal websites.",
-        examples=["https://janedoe.dev", "https://github.com/johndoe"],
+        description="Other websites (comma-separated).",
+        examples=["https://janedoe.dev, https://github.com/janedoe"],
     )
     headline: str | None = Field(
         default=None,
@@ -281,15 +287,16 @@ def apply_profile_config(
         if field_name in ("tiobe_override", "ai"):
             continue
 
-        # Phone numbers come in as raw strings from TOML; normalize to Phone
-        # Email addresses come in as raw strings from TOML; normalize to Email
-        # Websites may be a TOML array; normalize to comma-separated string for ProfileRow
-        if field_name == "phone_number" and isinstance(field_value, str):
-            updated_profile[field_name] = Phone.from_raw(field_value)
+        # Phone numbers come in as raw strings from TOML; normalize to
+        # Phone so downstream converters receive the value object, not a
+        # raw string from the LinkedIn CSV path.
+        # Email addresses come in as raw strings from TOML; normalize to
+        # Email so downstream converters receive the value object, not a
+        # raw string from the LinkedIn CSV path.
         elif field_name == "email_address" and isinstance(field_value, str):
             updated_profile[field_name] = Email.from_raw(field_value)
-        elif field_name == "websites" and isinstance(field_value, list):
-            updated_profile[field_name] = ", ".join(field_value)
+        if field_name == "phone_number" and isinstance(field_value, str):
+            updated_profile[field_name] = Phone.from_raw(field_value)
         else:
             # Apply override (field_name is guaranteed to exist on config
             # since we're iterating over config.model_dump())

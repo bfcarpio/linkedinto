@@ -43,13 +43,19 @@ class TestQuestionnaire:
         )
 
         fake_values_iter = fake_values(
-            ("5", "John", ""),  # select 5th field (first_name), enter John, Enter to finish
+            (
+                "5",
+                "John",
+                "",
+            ),  # select 5th field (first_name), enter John, Enter to finish
             ("", ""),  # start with empty string → finish
         )
 
         from linkedinto.questionnaire import run_questionnaire
 
-        result = run_questionnaire(profile, prompt_fn=fake_prompt, _fake_iter=fake_values_iter)
+        result = run_questionnaire(
+            profile, prompt_fn=fake_prompt, _fake_iter=fake_values_iter
+        )
 
         assert result.first_name == "John"
         assert result.last_name == "Doe"
@@ -66,7 +72,9 @@ class TestQuestionnaire:
 
         from linkedinto.questionnaire import run_questionnaire
 
-        result = run_questionnaire(profile, prompt_fn=fake_prompt, _fake_iter=fake_values_iter)
+        result = run_questionnaire(
+            profile, prompt_fn=fake_prompt, _fake_iter=fake_values_iter
+        )
 
         assert result.first_name == "John"
         assert result.last_name == "Doe"
@@ -79,12 +87,16 @@ class TestQuestionnaire:
 
         from linkedinto.questionnaire import run_questionnaire
 
-        result = run_questionnaire(profile, prompt_fn=fake_prompt, _fake_iter=fake_values_iter)
+        result = run_questionnaire(
+            profile, prompt_fn=fake_prompt, _fake_iter=fake_values_iter
+        )
 
         assert result.email_address is not None
         assert result.email_address.address == "john@example.com"
 
-    def test_edit_email_invalid_then_valid(self, fake_values: Callable[[], object]) -> None:
+    def test_edit_email_invalid_then_valid(
+        self, fake_values: Callable[[], object]
+    ) -> None:
         """Invalid email re-prompts; valid email succeeds."""
         profile = ProfileRow(email_address=None)
 
@@ -96,7 +108,9 @@ class TestQuestionnaire:
 
         from linkedinto.questionnaire import run_questionnaire
 
-        result = run_questionnaire(profile, prompt_fn=fake_prompt, _fake_iter=fake_values_iter)
+        result = run_questionnaire(
+            profile, prompt_fn=fake_prompt, _fake_iter=fake_values_iter
+        )
 
         assert result.email_address is not None
         assert result.email_address.address == "jane@example.com"
@@ -109,12 +123,16 @@ class TestQuestionnaire:
 
         from linkedinto.questionnaire import run_questionnaire
 
-        result = run_questionnaire(profile, prompt_fn=fake_prompt, _fake_iter=fake_values_iter)
+        result = run_questionnaire(
+            profile, prompt_fn=fake_prompt, _fake_iter=fake_values_iter
+        )
 
         assert result.phone_number is not None
         assert result.phone_number.international == "+1 555 123-4567"
 
-    def test_profile_same_object_identity(self, fake_values: Callable[[], object]) -> None:
+    def test_profile_same_object_identity(
+        self, fake_values: Callable[[], object]
+    ) -> None:
         """ProfileRow is the same object identity, but values mutated."""
         profile = ProfileRow(first_name="Jane", last_name="Doe")
 
@@ -123,7 +141,9 @@ class TestQuestionnaire:
         from linkedinto.questionnaire import run_questionnaire
 
         before = profile.first_name
-        result = run_questionnaire(profile, prompt_fn=fake_prompt, _fake_iter=fake_values_iter)
+        result = run_questionnaire(
+            profile, prompt_fn=fake_prompt, _fake_iter=fake_values_iter
+        )
         after = profile.first_name
 
         assert after == "John"
@@ -141,6 +161,8 @@ class TestQuestionnaire:
         with patch("linkedinto.questionnaire.Table") as mock_table:
             mock_table.return_value = None
 
-            run_questionnaire(profile, prompt_fn=fake_prompt, _fake_iter=fake_values_iter)
+            run_questionnaire(
+                profile, prompt_fn=fake_prompt, _fake_iter=fake_values_iter
+            )
 
             mock_table.assert_called_once()

@@ -8,10 +8,13 @@
     {<< latex_escape(pos.location) >>}
     {<< format_date_range(pos.started, pos.ended) >>}
     {
-<% if pos.highlights %>
+<% if pos.summary or pos.highlights %>
       \begin{cvitems}
+<% if pos.summary %>
+        \item {<< pos.summary >>}
+<% endif %>
 <% for item in pos.highlights %>
-        \item {<< latex_escape(item) >>}
+        \item {<< item >>}
 <% endfor %>
       \end{cvitems}
 <% endif %>

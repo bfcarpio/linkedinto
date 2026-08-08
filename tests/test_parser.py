@@ -61,3 +61,20 @@ class TestLinkedinZipParser:
         parser = LinkedinZipParser()
         with pytest.raises(LinkedInParserError, match="malformed"):
             parser.parse(path)
+
+    def test_parse_projects_multi_csv(self, make_zip) -> None:
+        """Multi-project CSV: each row becomes a separate ProjectRow with title."""
+        csv = (
+            "Title,Description,Url,Started On,Finished On\n"
+            "Project Alpha,Built an alpha app,https://alpha.dev,2023-01,2023-06\n"
+            "Project Beta,Built a beta app,https://beta.dev,2023-07,2023-12\n"
+        )
+        path = make_zip({"Projects.csv": csv})
+        parser = LinkedinZipParser()
+        data = parser.parse(path)
+        assert len(data.projects) == 2
+        assert data.projects[0].title == "Project Alpha"
+        assert data.projects[1].title == "Project Beta"
+        assert data.projects[0].url == "https://alpha.dev"
+        assert data.projects[0].started == "2023-01"
+        assert data.projects[0].ended == "2023-06"

@@ -37,6 +37,11 @@ class Converter(ABC):
     skill_grouper: Grouper | None = None
     """Optional AI skill grouper. Set by orchestrator before convert()."""
 
+    skill_groups: dict[str, list[str]] | None = None
+    """Pre-computed skill groupings. Set by orchestrator when AI grouping
+    is active so converters share one LLM call instead of each invoking
+    the grouper separately."""
+
     @abstractmethod
     def convert(self, data: Any) -> Any:
         """Convert input data to the target format model.

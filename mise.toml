@@ -8,7 +8,7 @@ tinytex = "latest"
 python.uv_venv_auto = "source"
 
 [tasks.clean]
-run = "rm -rf dist/ .pytest_cache/ .ruff_cache/ .ty/ __pycache__/ **/__pycache__/ linkedinto.egg-info/ .prek_cache/ resume.json rendercv.yaml awesome-cv.tex awesome-cv.cls awesome-cv.log awesome-cv.aux awesome-cv.pdf"
+run = "rm -rf dist/ .pytest_cache/ .ruff_cache/ .ty/ __pycache__/ **/__pycache__/ linkedinto.egg-info/ .prek_cache/ resume.json rendercv.yaml rendercv_output/ awesome-cv.tex awesome-cv.cls awesome-cv.log awesome-cv.aux awesome-cv.pdf"
 description = "Remove all generated and cache files"
 
 [tasks.test]
@@ -40,7 +40,8 @@ run = """#!/usr/bin/env bash
 # Output directory: first arg or current directory
 outdir="${1:-.}"
 outdir=$(cd "$outdir" && pwd)
-# Ensure required LaTeX packages are installed (idempotent)
+
+# --- Ensure required LaTeX packages are installed (idempotent) ---
 tlmgr install fontawesome6 sourcesans roboto parskip hyperref geometry xcolor fontspec unicode-math etoolbox xifthen xstring tabularx enumitem ragged2e fancyhdr ifxetex bookmark tcolorbox accsupp setspace 2>/dev/null || true
 # Make Source Sans 3 and Roboto OTFs visible to fontconfig (xelatex resolves fonts by name)
 fontotf=$(kpsewhich SourceSans3-Regular.otf 2>/dev/null)
@@ -53,15 +54,31 @@ if [ -n "$fontotf" ]; then
   fi
   fc-cache -f "$HOME/.fonts" 2>/dev/null || true
 fi
-# Clone Awesome-CV into a temp dir to get awesome-cv.cls and supporting files
-tmpdir=$(mktemp -d)
-trap 'rm -rf "$tmpdir"' EXIT
-git clone --depth 1 https://github.com/posquit0/Awesome-CV.git "$tmpdir/awesomecv"
-# Copy rendered .tex into the clone
-cp "$outdir/awesome-cv.tex" "$tmpdir/awesomecv/"
-cd "$tmpdir/awesomecv"
-# Build the PDF (xelatex may return non-zero on warnings but still produce output)
-xelatex -interaction=nonstopmode awesome-cv.tex || true
-cp awesome-cv.pdf "$outdir/"
+
+# --- RenderCV ---
+if [ -f "$outdir/rendercv.yaml" ]; then
+  echo "Rendering RenderCV..."
+  (cd "$outdir" && uv run "rendercv[full]" render rendercv.yaml)
+fi
+
+# --- Awesome-CV ---
+if [ -f "$outdir/awesome-cv.tex" ]; then
+  echo "Rendering Awesome-CV..."
+  # Clone Awesome-CV into a temp dir to get awesome-cv.cls and supporting files
+  tmpdir=$(mktemp -d)
+  trap 'rm -rf "$tmpdir"' EXIT
+  git clone --depth 1 https://github.com/posquit0/Awesome-CV.git "$tmpdir/awesomecv"
+  # Copy rendered .tex into the clone
+  cp "$outdir/awesome-cv.tex" "$tmpdir/awesomecv/"
+  cd "$tmpdir/awesomecv"
+  # Build the PDF (xelatex may return non-zero on warnings but still produce output)
+  xelatex -interaction=nonstopmode awesome-cv.tex || true
+  cp awesome-cv.pdf "$outdir/"
+fi
+
+if [ ! -f "$outdir/rendercv.yaml" ] && [ ! -f "$outdir/awesome-cv.tex" ]; then
+  echo "No rendercv.yaml or awesome-cv.tex found in $outdir" >&2
+  exit 1
+fi
 """
-description = "Compile awesome-cv.tex to PDF using xelatex. Usage: mise run render-pdf [output-dir]"
+description = "Compile rendercv.yaml and/or awesome-cv.tex to PDF. Usage: mise run render-pdf [output-dir]"

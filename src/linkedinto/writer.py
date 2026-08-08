@@ -22,7 +22,7 @@ def write_json(
     """Write data as formatted JSON with optional $schema reference."""
     p = Path(path)
     if isinstance(data, BaseModel):
-        data = data.model_dump(exclude_none=True)
+        data = data.model_dump(exclude_none=True, mode="json")
 
     if schema_url:
         data.pop("$schema", None)  # strip any existing key
@@ -43,7 +43,7 @@ def write_yaml(
     """Write data as YAML with optional schema comment."""
     p = Path(path)
     if isinstance(data, BaseModel):
-        data = data.model_dump(exclude_none=True)
+        data = data.model_dump(exclude_none=True, mode="json")
 
     lines: list[str] = []
     if schema_url:

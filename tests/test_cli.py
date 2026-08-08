@@ -93,6 +93,9 @@ class _FakeGrouper:
     def disable_cache(self) -> None:
         self.cache_disabled = True
 
+    def has_cached_groups(self, skills: list[str]) -> bool:
+        return False
+
     def group(self, skills: list[str]) -> dict[str, list[str]]:
         return {"DevOps": ["Docker", "Kubernetes"]}
 
@@ -187,6 +190,39 @@ class TestCliAiFlags:
         )
         assert result.exit_code == 0, result.output
         assert _FakeGrouper.instances[0].cache_disabled is False
+
+    def test_cache_only_attempted_without_ai_group_on_miss(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, cli_sample_zip: Path
+    ) -> None:
+        """Without --ai-group, cache is attempted but grouper not set on miss."""
+        zip_path = self._setup(tmp_path, monkeypatch, cli_sample_zip)
+        result = runner.invoke(
+            app,
+            [
+                "convert",
+                str(zip_path),
+                "--output-dir",
+                str(tmp_path / "out"),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        # _FakeGrouper.has_cached_groups returns False → no grouper set on converters
+        assert len(_FakeGrouper.instances) == 1
+        assert _FakeGrouper.instances[0].cache_disabled is False
+
+    def test_cache_only_no_ai_config_no_attempt(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, cli_sample_zip: Path
+    ) -> None:
+        """Without [ai] config, no grouper instances created."""
+        _FakeGrouper.instances = []
+        monkeypatch.setattr("linkedinto.orchestrator.SkillGrouper", _FakeGrouper)
+        monkeypatch.chdir(tmp_path)  # no linkedinto.toml
+        result = runner.invoke(
+            app,
+            ["convert", str(cli_sample_zip), "--output-dir", str(tmp_path / "out")],
+        )
+        assert result.exit_code == 0, result.output
+        assert len(_FakeGrouper.instances) == 0
 
     def test_ai_model_overrides_config(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, cli_sample_zip: Path

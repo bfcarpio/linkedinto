@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from linkedinto.constants import CSV_EXTENSION, UTF8_SIG_ENCODING
+from linkedinto.degree import Degree
 from linkedinto.domain import (
     AwardHonorRow,
     CertificationRow,
@@ -249,7 +250,7 @@ class LinkedinZipParser:
         data.education.append(
             EducationRow(
                 school=row.get("School"),
-                degree=row.get("Degree"),
+                degree=Degree.from_text(row.get("Degree")),
                 field=row.get("Field"),
                 started=row.get("Started"),
                 ended=row.get("Ended"),
@@ -281,7 +282,7 @@ class LinkedinZipParser:
     def _handle_project(self, data: LinkedInData, row: dict[str, str]) -> None:
         data.projects.append(
             ProjectRow(
-                title=row.get("Title"),
+                title=row.get("Position"),
                 name=row.get("Name"),
                 description=row.get("Description"),
                 url=extract_url(row.get("Url")),

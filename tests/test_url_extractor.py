@@ -16,8 +16,16 @@ class TestExtractWebsites:
                 ["https://company.com", "https://portfolio.com"],
             ),
             ("[COMPANY: https://company.com]", ["https://company.com"]),
-            # Plain URLs without labels are NOT matched by the bracket regex.
-            ("https://example.com, https://other.com", []),
+            # Plain comma-separated URLs (config file format).
+            (
+                "https://github.com/johndoe,https://johndoe.dev",
+                ["https://github.com/johndoe", "https://johndoe.dev"],
+            ),
+            # Plain URLs with spaces after commas.
+            (
+                "https://example.com, https://other.com",
+                ["https://example.com", "https://other.com"],
+            ),
             (None, []),
             ("", []),
             ("   ", []),

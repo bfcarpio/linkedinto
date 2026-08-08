@@ -49,6 +49,26 @@ SECTION_SKILLS = "skills"
 _logger = logging.getLogger(__name__)
 
 
+def _is_platform_url(url: str) -> bool:
+    """Return True if ``url`` points to a known code-hosting platform."""
+    return any(
+        domain in url
+        for domain in ("github.com/", "gitlab.com/", "bitbucket.org/", "codeberg.org/")
+    )
+
+
+def _extract_social_handle(raw: str, url_prefix: str = "") -> str:
+    """Extract a social handle from a URL or raw string.
+
+    Strips leading '@' and extracts the last path segment from URLs.
+    """
+    if url_prefix and url_prefix in raw:
+        return raw.rstrip("/").split(url_prefix)[-1].split("/")[0]
+    if raw.startswith("@"):
+        return raw[1:]
+    return raw
+
+
 class RenderCvConverter(Converter):
     """Convert LinkedInData to a RenderCV YAML model."""
 
@@ -74,17 +94,40 @@ class RenderCvConverter(Converter):
 
         parsed_websites = extract_websites(p.websites)
         if parsed_websites:
-            cv_data["website"] = parsed_websites[0]
+            non_platform = [u for u in parsed_websites if not _is_platform_url(u)]
+            if non_platform:
+                cv_data["website"] = non_platform[0]
 
         # --- Social networks ---
         if p.linkedin:
+            handle = _extract_social_handle(p.linkedin, "linkedin.com/in/")
             cv_data["social_networks"].append(
-                SocialNetwork(network="LinkedIn", username=p.linkedin)
+                SocialNetwork(network="LinkedIn", username=handle)
             )
         if p.twitter:
+            handle = _extract_social_handle(p.twitter)
             cv_data["social_networks"].append(
-                SocialNetwork(network="X", username=p.twitter)
+                SocialNetwork(network="X", username=handle)
             )
+
+        # --- Platform profiles from websites ---
+        # RenderCV's SocialNetwork schema supports GitHub and GitLab (and
+        # others like LinkedIn/X above), but NOT Bitbucket or Codeberg.  Those
+        # are excluded from the generic ``website`` field via _is_platform_url
+        # but cannot be added as SocialNetwork entries.
+        for url in parsed_websites:
+            if "github.com/" in url:
+                username = url.rstrip("/").split("github.com/")[-1].split("/")[0]
+                if username:
+                    cv_data["social_networks"].append(
+                        SocialNetwork(network="GitHub", username=username)
+                    )
+            elif "gitlab.com/" in url:
+                username = url.rstrip("/").split("gitlab.com/")[-1].split("/")[0]
+                if username:
+                    cv_data["social_networks"].append(
+                        SocialNetwork(network="GitLab", username=username)
+                    )
 
         # --- Summary section ---
         if p.summary:
@@ -151,14 +194,14 @@ class RenderCvConverter(Converter):
         When a skill_grouper is set, uses its categories; otherwise splits
         programming languages into one group and all others into a second group.
         """
-        if self.skill_grouper is not None:
+        if self.skill_groups is None and self.skill_grouper is not None:
             skill_names = [s.name for s in skills if s.name]
-            groups = self.skill_grouper.group(skill_names)
-
+            self.skill_groups = self.skill_grouper.group(skill_names)
+        if self.skill_groups is not None:
             sections: dict[str, list[Any]] = {
                 SECTION_SKILLS: [
                     OneLineEntry(label=category, details=", ".join(skills_list))
-                    for category, skills_list in groups.items()
+                    for category, skills_list in self.skill_groups.items()
                 ]
             }
             return sections
@@ -213,7 +256,7 @@ class RenderCvConverter(Converter):
         return EducationEntry(
             institution=row.school or "",
             area=row.field or "",
-            degree=row.degree,
+            degree=row.degree.abbreviation if row.degree else None,
             start_date=parse_linkedin_date(row.started),
             end_date=parse_linkedin_date(row.ended),
         )

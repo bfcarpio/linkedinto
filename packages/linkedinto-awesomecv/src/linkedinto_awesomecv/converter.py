@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import override
 
@@ -69,6 +70,36 @@ def latex_escape(text: str | None) -> str:
     return result
 
 
+def _escape_and_break(text: str | None) -> str:
+    """Escape LaTeX special chars and normalise whitespace.
+
+    LinkedIn CSV exports collapse newlines into double-spaces.  Since
+    summary text is rendered inside ``\\item{}`` (itemize), we can't
+    use ``\\\\`` line breaks — just collapse 2+ spaces to one so
+    sentences don't run together visually.
+    """
+    if not text:
+        return ""
+    result = latex_escape(text)
+    result = result.replace("\n", " ")
+    result = re.sub(r" {2,}", " ", result)
+    return result.strip()
+
+
+def _escape_for_paragraph(text: str | None) -> str:
+    """Escape LaTeX and convert newlines to ``\\\\`` line breaks.
+
+    Used for ``cvparagraph`` (outside ``\\cventry``) where ``\\\\``
+    forced line breaks are valid.
+    """
+    if not text:
+        return ""
+    result = latex_escape(text)
+    result = result.replace("\n", r"\\")
+    result = re.sub(r" {2,}", r" \\\\", result)
+    return result.strip()
+
+
 def format_acv_date(iso_date: str | None) -> str:
     """Parse an ISO date ``YYYY-MM-DD`` → ``Mon. YYYY``.
 
@@ -115,6 +146,18 @@ def format_date_range(start: str | None, end: str | None) -> str:
     return f"{s} - {e}"
 
 
+def _extract_social_handle(raw: str, url_prefix: str = "") -> str:
+    """Extract a clean social handle from a URL or raw string.
+
+    Strips leading ``@`` and extracts the last path segment from URLs.
+    """
+    if url_prefix and url_prefix in raw:
+        return raw.rstrip("/").split(url_prefix)[-1].split("/")[0]
+    if raw.startswith("@"):
+        return raw[1:]
+    return raw
+
+
 class AwesomeCvConverter(Converter):
     """Convert LinkedInData to Awesome-CV LaTeX via Jinja2 templates."""
 
@@ -130,6 +173,39 @@ class AwesomeCvConverter(Converter):
         env.globals["format_acv_date"] = format_acv_date
         template = env.get_template("resume.tex.j2")
         return template.render(**context)
+
+    @staticmethod
+    def _build_links(urls: list[str]) -> tuple[str, str, str, str]:
+        """Detect platform-specific URLs and build LaTeX header lines.
+
+        Maps known domains to Awesome-CV's dedicated icon commands:
+          github.com → \\github{username}
+          gitlab.com → \\gitlab{username}
+          bitbucket.org → \\bitbucket{username}
+        All other URLs (codeberg.org, personal sites, etc.) use \\homepage{url}.
+
+        Returns ``(github_line, gitlab_line, bitbucket_line, homepage_line)``.
+        """
+        github_line = ""
+        gitlab_line = ""
+        bitbucket_line = ""
+        homepage_line = ""
+        for url in urls:
+            if "github.com/" in url:
+                username = url.rstrip("/").split("github.com/")[-1].split("/")[0]
+                if username and not github_line:
+                    github_line = f"\\github{{{latex_escape(username)}}}"
+            elif "gitlab.com/" in url:
+                username = url.rstrip("/").split("gitlab.com/")[-1].split("/")[0]
+                if username and not gitlab_line:
+                    gitlab_line = f"\\gitlab{{{latex_escape(username)}}}"
+            elif "bitbucket.org/" in url:
+                username = url.rstrip("/").split("bitbucket.org/")[-1].split("/")[0]
+                if username and not bitbucket_line:
+                    bitbucket_line = f"\\bitbucket{{{latex_escape(username)}}}"
+            elif not homepage_line:
+                homepage_line = f"\\homepage{{{latex_escape(url)}}}"
+        return github_line, gitlab_line, bitbucket_line, homepage_line
 
     def _build_context(self, data: LinkedInData) -> dict:
         """Prepare template context from LinkedInData."""
@@ -158,20 +234,26 @@ class AwesomeCvConverter(Converter):
         if p and p.email_address:
             email_line = f"\\email{{{latex_escape(p.email_address.address)}}}"
 
-        # Homepage from websites
+        # Platform links from websites (GitHub, GitLab, Bitbucket, homepage)
+        github_line = ""
+        gitlab_line = ""
+        bitbucket_line = ""
         homepage_line = ""
         if p and p.websites:
             urls = extract_websites(p.websites)
-            if urls:
-                homepage_line = f"\\homepage{{{latex_escape(urls[0])}}}"
+            github_line, gitlab_line, bitbucket_line, homepage_line = self._build_links(
+                urls
+            )
 
         linkedin_line = ""
         if p and p.linkedin:
-            linkedin_line = f"\\linkedin{{{latex_escape(p.linkedin)}}}"
+            handle = _extract_social_handle(p.linkedin, "linkedin.com/in/")
+            linkedin_line = f"\\linkedin{{{latex_escape(handle)}}}"
 
         twitter_line = ""
         if p and p.twitter:
-            twitter_line = f"\\twitter{{{latex_escape(p.twitter)}}}"
+            handle = _extract_social_handle(p.twitter)
+            twitter_line = f"\\twitter{{{latex_escape(handle)}}}"
 
         # --- Sections ---
         positions = [self._build_position(pos) for pos in data.positions]
@@ -190,8 +272,7 @@ class AwesomeCvConverter(Converter):
             for block in normalized.split("\n\n"):
                 # The summary (text before first bullet) within each block.
                 text, highlights = parse_bullets(block)
-                # Preserve single newlines as LaTeX forced line breaks.
-                text = latex_escape(text).replace("\n", r"\\")
+                text = _escape_for_paragraph(text)
                 highlights = [latex_escape(h) for h in highlights]
                 if text or highlights:
                     summary_blocks.append({"text": text, "highlights": highlights})
@@ -204,6 +285,9 @@ class AwesomeCvConverter(Converter):
             "address_line": address_line,
             "mobile_line": mobile_line,
             "email_line": email_line,
+            "gitlab_line": gitlab_line,
+            "github_line": github_line,
+            "bitbucket_line": bitbucket_line,
             "homepage_line": homepage_line,
             "linkedin_line": linkedin_line,
             "twitter_line": twitter_line,
@@ -235,20 +319,25 @@ class AwesomeCvConverter(Converter):
 
     @staticmethod
     def _build_position(pos: PositionRow) -> dict:
-        _, highlights = parse_bullets(pos.description)
+        summary, highlights = parse_bullets(pos.description)
+        summary = _escape_and_break(summary)
+        highlights = [latex_escape(h) for h in highlights]
         return {
             "position": pos.position or "",
             "company": pos.company or "",
             "location": pos.location or "",
             "started": pos.started,
             "ended": pos.ended,
+            "summary": summary,
             "highlights": highlights,
         }
 
     @staticmethod
     def _build_education(edu: EducationRow) -> dict:
         return {
-            "degree": edu.degree or "",
+            "degree": (edu.degree.abbreviation or edu.degree.full)
+            if edu.degree
+            else "",
             "institution": edu.school or "",
             "location": "",
             "started": edu.started,
@@ -263,12 +352,15 @@ class AwesomeCvConverter(Converter):
 
     @staticmethod
     def _build_project(proj: ProjectRow) -> dict:
-        _, highlights = parse_bullets(proj.description)
+        summary, highlights = parse_bullets(proj.description)
+        summary = _escape_and_break(summary)
+        highlights = [latex_escape(h) for h in highlights]
         return {
             "name": proj.name or proj.title or "",
             "started": proj.started,
             "ended": proj.ended,
             "url": proj.url or "",
+            "summary": summary,
             "highlights": highlights,
         }
 
@@ -290,13 +382,16 @@ class AwesomeCvConverter(Converter):
 
     @staticmethod
     def _build_volunteer(v: VolunteerRow) -> dict:
-        _, highlights = parse_bullets(v.description)
+        summary, highlights = parse_bullets(v.description)
+        summary = _escape_and_break(summary)
+        highlights = [latex_escape(h) for h in highlights]
         return {
             "position": v.position or "",
             "organization": v.name or "",
             "location": "",
             "started": v.started,
             "ended": v.ended,
+            "summary": summary,
             "highlights": highlights,
         }
 
@@ -325,10 +420,14 @@ class AwesomeCvConverter(Converter):
         - With a skill grouper: use AI categories
         - Without: split programming languages vs other skills by proficiency
         """
-        if self.skill_grouper is not None:
+        if self.skill_groups is None and self.skill_grouper is not None:
             skill_names = [s.name for s in skills if s.name]
-            groups = self.skill_grouper.group(skill_names)
-            return [(category, skills_list) for category, skills_list in groups.items()]
+            self.skill_groups = self.skill_grouper.group(skill_names)
+        if self.skill_groups is not None:
+            return [
+                (category, skills_list)
+                for category, skills_list in self.skill_groups.items()
+            ]
 
         prog_skills: list[str] = []
         non_prog_skills: list[tuple[str, str]] = []

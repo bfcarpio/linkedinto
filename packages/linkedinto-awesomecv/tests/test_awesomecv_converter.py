@@ -99,6 +99,7 @@ class TestAwesomeCvConverter:
 
     def test_date_formatting(self) -> None:
         """ISO date 2023-09 renders as 'Sep. 2023'."""
+        from linkedinto.degree import Degree
         from linkedinto.domain import EducationRow, LinkedInData, ProfileRow
         from linkedinto.email_utils import Email
 
@@ -111,7 +112,7 @@ class TestAwesomeCvConverter:
             education=[
                 EducationRow(
                     school="MIT",
-                    degree="BS",
+                    degree=Degree.from_text("BS"),
                     started="2020-09",
                     ended="2023-09",
                 ),
@@ -204,3 +205,33 @@ class TestAwesomeCvConverter:
         assert "\\item {Reduced costs by 40\\%}" in result
         # "Key achievements:" should NOT be merged into a highlight item
         assert "\\item {Cloud architecture\\n\\nKey achievements:}" not in result
+
+    def test_project_summary_rendered_before_bullets(self) -> None:
+        """General text before bullets is rendered as the first cvitem."""
+        from linkedinto.domain import LinkedInData, ProfileRow, ProjectRow
+        from linkedinto.email_utils import Email
+
+        data = LinkedInData(
+            profile=ProfileRow(
+                first_name="Test",
+                last_name="User",
+                email_address=Email.from_raw("test@example.com"),
+            ),
+            projects=[
+                ProjectRow(
+                    title="My App",
+                    description=(
+                        "A general summary paragraph.\n"
+                        "\u2022 First bullet\n"
+                        "\u2022 Second bullet"
+                    ),
+                    started="2023-01",
+                    ended="2023-06",
+                ),
+            ],
+        )
+        converter = AwesomeCvConverter()
+        result = converter.convert(data)
+        assert "\\item {A general summary paragraph.}" in result
+        assert "\\item {First bullet}" in result
+        assert "\\item {Second bullet}" in result

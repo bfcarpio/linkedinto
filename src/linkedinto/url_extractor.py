@@ -34,8 +34,13 @@ def extract_url(raw: str | None) -> str | None:
 def extract_websites(raw: str | None) -> list[str]:
     """Extract all URLs from a LinkedIn websites field.
 
-    Handles bracket format: [COMPANY: https://example.com, PORTFOLIO: https://portfolio.com]
-    Strips outer brackets, splits entries by comma, extracts URL after colon for each entry.
+    Handles two formats:
+    - Labeled bracket: ``[COMPANY: https://example.com, PORTFOLIO: https://portfolio.com]``
+      (LinkedIn CSV export)
+    - Plain comma-separated: ``https://github.com/johndoe,https://johndoe.dev``
+      (linkedinto.toml config)
+
+    The labeled format is tried first so labels aren't captured into URLs.
 
     Returns:
         A list of all URLs found, or empty list for None/empty input.
@@ -43,5 +48,10 @@ def extract_websites(raw: str | None) -> list[str]:
     if not raw or not raw.strip():
         return []
 
-    matches = re.findall(r"[^:\]]+:\s*(https?://[^\s,\]]+)", raw)
-    return matches
+    # Labeled format: [LABEL: url, LABEL: url] or LABEL: url (LinkedIn export)
+    labeled = re.findall(r"[^:\]]+:\s*(https?://[^\s,\]]+)", raw)
+    if labeled:
+        return labeled
+
+    # Fallback: plain comma-separated URLs (config file format)
+    return re.findall(r"(https?://[^\s,\]]+)", raw)

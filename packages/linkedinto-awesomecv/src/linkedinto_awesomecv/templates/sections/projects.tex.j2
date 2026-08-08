@@ -8,10 +8,13 @@
     {}
     {<< format_date_range(proj.started, proj.ended) >>}
     {
-<% if proj.highlights %>
+<% if proj.summary or proj.highlights %>
       \begin{cvitems}
+<% if proj.summary %>
+        \item {<< proj.summary >>}
+<% endif %>
 <% for item in proj.highlights %>
-        \item {<< latex_escape(item) >>}
+        \item {<< item >>}
 <% endfor %>
       \end{cvitems}
 <% endif %>

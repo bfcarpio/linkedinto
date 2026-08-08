@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from linkedinto.date_parser import parse_linkedin_date
+from linkedinto.degree import Degree
 from linkedinto.email_utils import Email
 from linkedinto.phone_utils import Phone
 
@@ -43,7 +44,7 @@ class PositionRow:
 @dataclass
 class EducationRow:
     school: str | None = None
-    degree: str | None = None
+    degree: Degree | None = None
     field: str | None = None
     started: str | None = None
     ended: str | None = None
