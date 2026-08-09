@@ -114,17 +114,9 @@ def convert(
         "--ai-model",
         help="Override the model from [ai] config (e.g. 'anthropic/claude-3-haiku-20240307').",
     ),
-    no_interactive: bool = typer.Option(
-        False,
-        "--no-interactive",
-        help="Skip the interactive profile questionnaire.",
-    ),
 ) -> None:
     """Convert a LinkedIn export ZIP to JSON Resume, RenderCV YAML, and/or Awesome-CV LaTeX."""
     try:
-        # Determine if questionnaire should run (TTY check + flag)
-        interactive = not no_interactive and sys.stdin.isatty()
-
         if not ai_preview:
             output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -135,7 +127,6 @@ def convert(
             ai_preview=ai_preview,
             ai_model=ai_model,
             no_cache=no_cache,
-            interactive=interactive,
             partial_jsonresume=partial_jsonresume,
             partial_rendercv=partial_rendercv,
             partial_awesomecv=partial_awesomecv,

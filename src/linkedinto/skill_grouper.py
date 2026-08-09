@@ -326,14 +326,8 @@ class SkillGrouper(Grouper):
         if self._api_key:
             kwargs["api_key"] = self._api_key
 
-        from rich.console import Console
-
-        console = Console(stderr=True)
         try:
-            with console.status(
-                f"[bold blue]Grouping {len(skills)} skills with {self._model}…"
-            ):
-                response = litellm.completion(**kwargs)
+            response = litellm.completion(**kwargs)
         except Exception as exc:
             raise AiGroupingError(f"LLM call to {self._model} failed: {exc}") from exc
 

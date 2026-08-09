@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import logging
-from collections.abc import Callable
 from importlib.metadata import entry_points
 from pathlib import Path
 from typing import Any
@@ -137,8 +136,6 @@ def run(
     ai_preview: bool = False,
     ai_model: str | None = None,
     no_cache: bool = False,
-    interactive: bool = False,
-    prompt_fn: Callable[[str], str] | None = None,
     partial_jsonresume: str | Path | None = None,
     partial_rendercv: str | Path | None = None,
     partial_awesomecv: str | Path | None = None,
