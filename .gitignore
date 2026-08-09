@@ -1,38 +1,42 @@
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.egg-info/
-dist/
-*.egg
-.venv/
-.uv/
-
-# Tooling
-.pytest_cache/
-.coverage
-.ruff_cache/
-.ty/
-.mypy_cache/
-.pre-commit/
-.prek_cache/
-
-# Environment
-.env
-.env.local
-*.swp
-*.swo
-
-# IDE
-.vscode/
-.idea/
-*.iml
-
-resume.json
-rendercv.yaml
-awesome-cv.tex
-awesome-cv.cls
-awesome-cv.log
-awesome-cv.aux
-awesome-cv.pdf
-linkedinto.toml
+  # Python
+  __pycache__/
+  *.pyc
+  *.pyo
+  *.egg-info/
+  dist/
+  *.egg
+  .venv/
+  .uv/
+  
+  # Tooling
+  .pytest_cache/
+  .coverage
+  coverage.xml
+  .ty/
+  .mypy_cache/
+  .pre-commit/
+  .prek_cache/
+  
+  # Environment
+  .env
+  .env.local
+  *.swp
+  *.swo
+  
+  # IDE
+  .vscode/
+  .idea/
+  *.iml
+  
+  # RenderCV
+  resume.json
+  rendercv.yaml
+  awesome-cv.tex
+  awesome-cv.cls
+  awesome-cv.log
+  awesome-cv.aux
+  awesome-cv.pdf
+  linkedinto.toml
+  
+  # RenderCV output
+  rendercv_output/

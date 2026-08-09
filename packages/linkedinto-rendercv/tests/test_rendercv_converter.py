@@ -126,7 +126,7 @@ class TestRenderCvConverter:
         )
         converter = RenderCvConverter()
         result = converter.convert(data)
-        summary = result.sections.get("summary", [])
+        summary = (result.sections or {}).get("summary", [])
         assert len(summary) >= 5  # text + 2 bullets + text + 1 bullet
         assert "Senior engineer." in summary
         assert "\u2022 Backend systems" in summary

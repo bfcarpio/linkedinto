@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import override
+from typing import Any, TypedDict, cast, override
 
 from jinja2 import Environment, FileSystemLoader
 
@@ -16,11 +16,13 @@ from linkedinto.domain import (
     CertificationRow,
     EducationRow,
     InterestRow,
+    LanguageRow,
     LinkedInData,
     PositionRow,
     ProfileRow,
     ProjectRow,
     PublicationRow,
+    SkillRow,
     VolunteerRow,
 )
 from linkedinto.language_detector import (
@@ -158,6 +160,98 @@ def _extract_social_handle(raw: str, url_prefix: str = "") -> str:
     return raw
 
 
+class SummaryBlock(TypedDict):
+    text: str
+    highlights: list[str]
+
+
+class PositionEntry(TypedDict):
+    position: str
+    company: str
+    location: str
+    started: str | None
+    ended: str | None
+    summary: str
+    highlights: list[str]
+
+
+class EducationEntry(TypedDict):
+    degree: str
+    institution: str
+    location: str
+    started: str | None
+    ended: str | None
+    score: str
+    courses: list[str]
+
+
+class ProjectEntry(TypedDict):
+    name: str
+    started: str | None
+    ended: str | None
+    url: str
+    summary: str
+    highlights: list[str]
+
+
+class HonorEntry(TypedDict):
+    title: str
+    awarder: str
+    date: str | None
+
+
+class CertificationEntry(TypedDict):
+    name: str
+    issuer: str
+    date: str | None
+
+
+class VolunteerEntry(TypedDict):
+    position: str
+    organization: str
+    location: str
+    started: str | None
+    ended: str | None
+    summary: str
+    highlights: list[str]
+
+
+class PublicationEntry(TypedDict):
+    title: str
+    publisher: str
+    date: str | None
+
+
+class InterestEntry(TypedDict):
+    name: str
+
+
+class TemplateContext(TypedDict):
+    name_preamble: str
+    position_line: str
+    address_line: str
+    mobile_line: str
+    email_line: str
+    gitlab_line: str
+    github_line: str
+    bitbucket_line: str
+    homepage_line: str
+    linkedin_line: str
+    twitter_line: str
+    full_name: str
+    summary_blocks: list[SummaryBlock]
+    positions: list[PositionEntry]
+    education: list[EducationEntry]
+    projects: list[ProjectEntry]
+    honors: list[HonorEntry]
+    certifications: list[CertificationEntry]
+    volunteer: list[VolunteerEntry]
+    publications: list[PublicationEntry]
+    interests: list[InterestEntry]
+    languages: list[tuple[str, str]]
+    skills: list[tuple[str, list[str]]]
+
+
 class AwesomeCvConverter(Converter):
     """Convert LinkedInData to Awesome-CV LaTeX via Jinja2 templates."""
 
@@ -168,9 +262,10 @@ class AwesomeCvConverter(Converter):
         """Render LinkedInData to a ``.tex`` string."""
         context = self._build_context(data)
         env = _make_env()
-        env.globals["latex_escape"] = latex_escape
-        env.globals["format_date_range"] = format_date_range
-        env.globals["format_acv_date"] = format_acv_date
+        globals_dict: dict[str, Any] = cast(dict[str, Any], env.globals)
+        globals_dict["latex_escape"] = latex_escape
+        globals_dict["format_date_range"] = format_date_range
+        globals_dict["format_acv_date"] = format_acv_date
         template = env.get_template("resume.tex.j2")
         return template.render(**context)
 
@@ -207,7 +302,7 @@ class AwesomeCvConverter(Converter):
                 homepage_line = f"\\homepage{{{latex_escape(url)}}}"
         return github_line, gitlab_line, bitbucket_line, homepage_line
 
-    def _build_context(self, data: LinkedInData) -> dict:
+    def _build_context(self, data: LinkedInData) -> TemplateContext:
         """Prepare template context from LinkedInData."""
         p = data.profile
 
@@ -268,7 +363,7 @@ class AwesomeCvConverter(Converter):
         skills = self._build_skills(data.skills)
         if p and p.summary:
             normalized = p.summary.replace("\r\n", "\n").replace("\r", "\n")
-            summary_blocks: list[dict] = []
+            summary_blocks: list[SummaryBlock] = []
             for block in normalized.split("\n\n"):
                 # The summary (text before first bullet) within each block.
                 text, highlights = parse_bullets(block)
@@ -318,7 +413,7 @@ class AwesomeCvConverter(Converter):
         return f"\\{cmd}{{{latex_escape(value)}}}"
 
     @staticmethod
-    def _build_position(pos: PositionRow) -> dict:
+    def _build_position(pos: PositionRow) -> PositionEntry:
         summary, highlights = parse_bullets(pos.description)
         summary = _escape_and_break(summary)
         highlights = [latex_escape(h) for h in highlights]
@@ -333,7 +428,7 @@ class AwesomeCvConverter(Converter):
         }
 
     @staticmethod
-    def _build_education(edu: EducationRow) -> dict:
+    def _build_education(edu: EducationRow) -> EducationEntry:
         return {
             "degree": (edu.degree.abbreviation or edu.degree.full)
             if edu.degree
@@ -351,7 +446,7 @@ class AwesomeCvConverter(Converter):
         }
 
     @staticmethod
-    def _build_project(proj: ProjectRow) -> dict:
+    def _build_project(proj: ProjectRow) -> ProjectEntry:
         summary, highlights = parse_bullets(proj.description)
         summary = _escape_and_break(summary)
         highlights = [latex_escape(h) for h in highlights]
@@ -365,7 +460,7 @@ class AwesomeCvConverter(Converter):
         }
 
     @staticmethod
-    def _build_honor(h: AwardHonorRow) -> dict:
+    def _build_honor(h: AwardHonorRow) -> HonorEntry:
         return {
             "title": h.title or "",
             "awarder": h.awarder or h.issuer or h.company or "",
@@ -373,7 +468,7 @@ class AwesomeCvConverter(Converter):
         }
 
     @staticmethod
-    def _build_certification(c: CertificationRow) -> dict:
+    def _build_certification(c: CertificationRow) -> CertificationEntry:
         return {
             "name": c.name or "",
             "issuer": c.issuer or "",
@@ -381,7 +476,7 @@ class AwesomeCvConverter(Converter):
         }
 
     @staticmethod
-    def _build_volunteer(v: VolunteerRow) -> dict:
+    def _build_volunteer(v: VolunteerRow) -> VolunteerEntry:
         summary, highlights = parse_bullets(v.description)
         summary = _escape_and_break(summary)
         highlights = [latex_escape(h) for h in highlights]
@@ -396,7 +491,7 @@ class AwesomeCvConverter(Converter):
         }
 
     @staticmethod
-    def _build_publication(pub: PublicationRow) -> dict:
+    def _build_publication(pub: PublicationRow) -> PublicationEntry:
         return {
             "title": pub.name or pub.title or "",
             "publisher": pub.publisher or "",
@@ -404,16 +499,16 @@ class AwesomeCvConverter(Converter):
         }
 
     @staticmethod
-    def _build_interest(i: InterestRow) -> dict:
+    def _build_interest(i: InterestRow) -> InterestEntry:
         return {"name": i.name or ""}
 
-    def _build_languages(self, languages: list) -> list[tuple[str, str]]:
+    def _build_languages(self, languages: list[LanguageRow]) -> list[tuple[str, str]]:
         """Build (name, proficiency) tuples for the languages section."""
         return [
             (lang.name or "", lang.proficiency or "") for lang in languages if lang.name
         ]
 
-    def _build_skills(self, skills: list) -> list[tuple[str, list[str]]]:
+    def _build_skills(self, skills: list[SkillRow]) -> list[tuple[str, list[str]]]:
         """Group skills into (category, [skill_names]) tuples.
 
         Mirrors RenderCvConverter._build_skills logic:

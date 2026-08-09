@@ -24,15 +24,24 @@ run = "uv run pytest --cov=linkedinto --cov-report=html --cov-report=xml && echo
 description = "Generate HTML and XML coverage reports"
 
 [tasks.lint]
-run = "uv run ruff check src/ tests/"
+run = "uv run ruff check src/ tests/ packages/"
 description = "Run ruff linter"
 
 [tasks.format]
-run = "uv run ruff format --respect-gitignore --exclude tests/fixtures/"
-description = "Check formatting with ruff"
+run = "uv run ruff format --respect-gitignore --exclude tests/fixtures/ src/ tests/ packages/"
+description = "Format code with ruff (in-place)"
+
+[tasks.format-check]
+run = "uv run ruff format --check --exclude tests/fixtures/ src/ tests/ packages/"
+description = "Check formatting with ruff (fails if unformatted)"
+
+[tasks.ci]
+run = "uv run ruff check src/ tests/ packages/ && uv run ruff format --check --exclude tests/fixtures/ src/ tests/ packages/ && uv run ty check src/ tests/ packages/ && uv run pytest --cov=linkedinto --cov-report=term-missing --cov-report=xml --cov-fail-under=80"
+description = "Run all CI checks (lint, format, typecheck, test with coverage)"
+
 
 [tasks.typecheck]
-run = "uv run ty check src/ tests/"
+run = "uv run ty check src/ tests/ packages/"
 description = "Run type checker"
 
 [tasks.render-pdf]

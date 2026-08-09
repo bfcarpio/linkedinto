@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from typing import override
 
 
 @dataclass(frozen=True)
@@ -102,5 +103,6 @@ class Degree:
             return cls(full=defn.full, abbreviation=defn.abbreviation)
         return cls(full=full, abbreviation=None)
 
+    @override
     def __str__(self) -> str:
         return self.full

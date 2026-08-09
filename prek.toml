@@ -13,7 +13,7 @@ id = "ruff format"
 name = "ruff format"
 types = ["python"]
 language = "system"
-entry = "uv run ruff format --check --exclude tests/fixtures/ src/ packages/"
+entry = "uv run ruff format --check --exclude tests/fixtures/ src/ tests/ packages/"
 
 [[repos.hooks]]
 id = "ty check"
