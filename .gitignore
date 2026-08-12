@@ -1,42 +1,58 @@
-  # Python
-  __pycache__/
-  *.pyc
-  *.pyo
-  *.egg-info/
-  dist/
-  *.egg
-  .venv/
-  .uv/
-  
-  # Tooling
-  .pytest_cache/
-  .coverage
-  coverage.xml
-  .ty/
-  .mypy_cache/
-  .pre-commit/
-  .prek_cache/
-  
-  # Environment
-  .env
-  .env.local
-  *.swp
-  *.swo
-  
-  # IDE
-  .vscode/
-  .idea/
-  *.iml
-  
-  # RenderCV
-  resume.json
-  rendercv.yaml
-  awesome-cv.tex
-  awesome-cv.cls
-  awesome-cv.log
-  awesome-cv.aux
-  awesome-cv.pdf
-  linkedinto.toml
-  
-  # RenderCV output
-  rendercv_output/
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+*.egg
+.venv/
+.uv/
+
+# Tooling
+.pytest_cache/
+.coverage
+coverage.xml
+.ty/
+.mypy_cache/
+.pre-commit/
+.prek_cache/
+
+# Environment
+.env
+.env.local
+*.swp
+*.swo
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# RenderCV
+resume.json
+rendercv.yaml
+awesome-cv.tex
+awesome-cv.cls
+awesome-cv.log
+awesome-cv.aux
+awesome-cv.pdf
+linkedinto.toml
+
+# RenderCV output
+rendercv_output/
+
+# Build artifacts (recursive patterns - use slashes for subdirectories)
+*.so
+*.dylib
+*.dll
+*.exe
+*.o
+*.a
+build/
+
+# Platform
+.DS_Store
+Thumbs.db
+
+# Root-level lock files (optional - uncomment if you don't want to track them)
+# uv.lock
